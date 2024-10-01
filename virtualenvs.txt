@@ -1,0 +1,41 @@
+Instructions to configure Python with virtualenv in the calcula server
+----------------------------------------------------------------------
+
+1. Create a directory to store the virtualenvs:
+
+   $ cd ~; mkdir venvs
+
+2. Create the virtualenv
+
+   $ virtualenv --python=python3.6 ~/venvs/m1-proj
+
+3. Activate the virtualenv: (you must do that at each session start)
+
+   $ source ~/venvs/m1-proj/bin/activate
+
+4. Install packages:
+
+pip install numpy
+pip install imageio
+pip install docopt
+pip install scikit-image
+pip install sklearn
+pip install ml_metrics 
+pip install pandas
+pip install dataframe_image
+
+# Optional
+pip install opencv-contrib-python
+pip install pytesseract
+...
+
+5. Get help about virtualenvs:
+
+https://virtualenv.pypa.io/en/stable/
+
+
+6. Provide info about your virtualenv:
+
+   If you install additional packages, create (and upload to github) a requirements.txt file:
+   $ pip freeze > requirements.txt
+
