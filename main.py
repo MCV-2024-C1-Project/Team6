@@ -4,6 +4,7 @@ import os
 import csv
 import sys
 import math
+import src.descriptors
 import src.query
 
 DATABASE_PATH = "./"
@@ -13,7 +14,7 @@ if __name__ == '__main__':
     query_folder = sys.argv[1]
     parser = argparse.ArgumentParser()
     
-    #init: create file descriprot for database (input).
+    #init: create file descriptor for database (input).
     #predict: predict images for a single input.
     #batch-predict: run predictions for all the files in the input folder.
     #evaluate: same as batch-predict but with precision metrics using ground truth assuming it's present in input folder.
@@ -35,7 +36,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     action = args.action
     if action == "init":
-        pass
+        src.descriptors.compute_descriptors(args.input,"generated_descriptors")
     elif action == "predict":
         src.query.single_prediction(args.input, '')
     elif action == "batch-predict":
