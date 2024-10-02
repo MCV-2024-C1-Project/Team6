@@ -29,6 +29,7 @@ if __name__ == '__main__':
                         default="", 
                         help='input argument')
     
+    
     parser.add_argument('--result-number', 
                         required=False, 
                         default=1, 
@@ -37,12 +38,19 @@ if __name__ == '__main__':
     action = args.action
     if action == "init":
         src.descriptors.compute_descriptors(args.input,"generated_descriptors")
+
+        #descriptor_list = src.descriptors.load_descriptors("generated_descriptors/descriptor_grayscale_20_bins.pkl")
+        #print(descriptor_list)
+
     elif action == "predict":
         src.query.single_prediction(args.input, '')
+
     elif action == "batch-predict":
         pass
+
     elif action == "evaluate":
         pass
+
     else:
         pass
     # src.query.run_query_week1(args.path, args.outputdir)

@@ -31,12 +31,18 @@ def compute_descriptors(input_folder,output_folder):
         
     print(f"List saved to {output_folder}")
             
+#retrieve pairs of [photo_path,descriptor] from pkl file
+def load_descriptors(input_folder):
+    with open(input_folder,"rb") as f:
+        descriptor_list = pickle.load(f)
+    return descriptor_list
+
 
 #retrieve all image paths from a folder
 def get_all_jpg_images(input_folder):
     image_paths = []
     for file in  os.listdir(input_folder):
         if file.endswith(".jpg"):
-            path = os.path.join(input_folder,file)
+            path = input_folder+"/"+file
             image_paths.append(path)
     return image_paths
