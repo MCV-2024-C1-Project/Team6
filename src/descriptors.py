@@ -1,39 +1,45 @@
-# descriptiors
+# descriptors
 import os
+import sys
 import imageio as iio
 import skimage.color 
 import numpy as np
 import pickle
 
-from src.feature import HistogramExtractor
+from src.histogram import HistogramExtractorFactory
 
-def compute_descriptors(input_folder,output_folder):
-
+def compute_descriptor(path, type, subtype, num_bins=256):
+    if type != "Histogram" :
+        sys.exit("Not yet implemented")
+    
     #setup the type of histogram you want
-    num_bins = 256
-    color_mode = 'GRAY'
-    # color_mode = 'RGB'
-
+    color_mode = subtype #GRAY or RGB from this moment
+    
     #list of picture name and its histogram
     descriptor_list = []
+    
+    hist_extractor = HistogramExtractorFactory(type = color_mode, histogram_bins = num_bins)
+    return hist_extractor.extract(path)
+
+
+#maybe change the name to save descriptors?
+def generate_descriptors_DBfile(input_folder, output_folder, descriptor_type, descriptor_subtype, num_bins=256):
 
     image_paths = get_all_jpg_images(input_folder)
-    hist_extractor = HistogramExtractor(color_mode= color_mode, histogram_bins= num_bins)
-
     for path in image_paths:
-        histograms = hist_extractor.extract(path)
-        descriptor_list.append( [path,histograms] )
+        descriptor = compute_descriptor(path, descriptor_type, descriptor_subtype, num_bins)
+        descriptor_list.append( (path, descriptor) ) #changed from array to tuple, more easily iteratable
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    descriptor_name = f"descriptor_{color_mode.lower()}scale_{num_bins}_bins.pkl"
+    descriptor_name = f"descriptor_{descriptor_subtype.lower()}scale_{num_bins}_bins.pkl"
     with open(output_folder+"/"+descriptor_name, "wb") as f:
         pickle.dump(descriptor_list,f)
         
     print(f"List saved to {output_folder+'/'+descriptor_name}")
             
-#retrieve pairs of [photo_path,descriptor] from pkl file
+#retrieve pairs of (photo_path, descriptor) from pkl file
 def load_descriptors(input_folder):
     with open(input_folder,"rb") as f:
         descriptor_list = pickle.load(f)
