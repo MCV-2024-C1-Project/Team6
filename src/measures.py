@@ -6,7 +6,7 @@ def MeasureFactory(type:str):
     if type == "HellingerKernel":
         return HellingerKernelSimilarity()
     if type == "Intersection":
-        return HellingerKernelSimilarity()
+        return HistogramIntersectionSimilarity()
     else:
         sys.exit("ERROR: Unknow Measure type: " + type)
 
