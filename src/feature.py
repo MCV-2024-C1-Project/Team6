@@ -8,7 +8,7 @@ class HistogramExtractor(object):
         self.color_mode = color_mode
         self.histogram_bins = histogram_bins
 
-    def extract(self, image_path:str):
+    def extract(self, image_path:str, normalize = True):
         # Caution: image from imageio is RGB, from cv2 is RBG
         image = iio.imread(image_path)
         self.histograms = [] 
@@ -22,6 +22,7 @@ class HistogramExtractor(object):
                     single_channel_img.flatten(),
                     bins=bin_edges
                     )
+                channel_histogram = channel_histogram / channel_histogram.sum() if normalize else channel_histogram
                 self.histograms.append(channel_histogram)
 
         elif self.color_mode == 'GRAY':
@@ -32,6 +33,7 @@ class HistogramExtractor(object):
                 gray_image.flatten(),
                 bins=bin_edges
                 )
+            histogram = histogram / histogram.sum() if normalize else histogram
             self.histograms.append(histogram)
 
         else: # Placeholder
