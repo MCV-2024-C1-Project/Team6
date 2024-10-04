@@ -1,4 +1,8 @@
+#DATA FOLDERS
 generated_descriptors/
+BBDD/
+qsd1_w1/
+results/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

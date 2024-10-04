@@ -5,6 +5,14 @@ import numpy as np
 import sys
 import cv2
 
+HistogramComponents = {
+    'RGB': ['Red', 'Green', 'Blue'],
+    'GRAY': ['Gray'],
+    'HSV': ['Hue', 'Staturation', 'Value'],
+    'YCbCr': ['Luminity', 'Color b', 'Color r'],
+    'Super': ['Luminity', 'Color b', 'Color r']+['Hue', 'Staturation', 'Value'],
+}
+
 def HistogramExtractorFactory(type:str, histogram_bins:int = 256):
     if type == "RGB":
         return RGBHistogramExtractor(histogram_bins)
@@ -14,6 +22,8 @@ def HistogramExtractorFactory(type:str, histogram_bins:int = 256):
         return HSVHistogramExtractor(histogram_bins)
     elif type == "YCbCr":
         return YCbCrHistogramExtractor(histogram_bins)
+    elif type=='Super':
+        return SuperHistogram(histogram_bins)
     else:
         sys.exit("ERROR: Unknow histogram type: "+type)
 
@@ -62,7 +72,7 @@ class GrayHistogramExtractor(HistogramExtractor):
     def extract(self, image_path:str, normalize = True):
         # Caution: image from imageio is RGB, from cv2 is BGR
         image = iio.imread(image_path)
-        self.histograms = []
+        histograms = []
 
         #GRAY mode
         bin_edges = np.linspace(0, 1, num=self.histogram_bins + 1)
@@ -72,9 +82,9 @@ class GrayHistogramExtractor(HistogramExtractor):
             bins=bin_edges
             )
         histogram = histogram / histogram.sum() if normalize else histogram
-        self.histograms.append(histogram)
+        histograms.append(histogram)
 
-        return self.histograms
+        return histograms
 
 class RGBHistogramExtractor(HistogramExtractor):
     def __init__(self, histogram_bins:int = 256):
@@ -83,10 +93,9 @@ class RGBHistogramExtractor(HistogramExtractor):
     def extract(self, image_path:str, normalize = True):
         # Caution: image from imageio is RGB, from cv2 is BGR
         image = iio.imread(image_path)
-        self.histograms = [] 
+        histograms = [] 
         # RGB mode
         bin_edges = np.linspace(0, 255, num=self.histogram_bins + 1)
-        print(image.shape)
         for channel in range(image.shape[2]):
             single_channel_img = image[:,:,channel]
             channel_histogram, bin_edges = np.histogram(
@@ -94,9 +103,9 @@ class RGBHistogramExtractor(HistogramExtractor):
                 bins=bin_edges
                 )
             channel_histogram = channel_histogram / channel_histogram.sum() if normalize else channel_histogram
-            self.histograms.append(channel_histogram)
+            histograms.append(channel_histogram)
         
-        return self.histograms
+        return histograms
     
 
 class HSVHistogramExtractor(HistogramExtractor):
@@ -108,7 +117,7 @@ class HSVHistogramExtractor(HistogramExtractor):
         image = iio.imread(image_path)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
 
-        self.histograms = [] 
+        histograms = [] 
         # RGB mode
         bin_edges = np.linspace(0, 255, num=self.histogram_bins + 1)
         for channel in range(image.shape[2]):
@@ -118,10 +127,10 @@ class HSVHistogramExtractor(HistogramExtractor):
                 bins=bin_edges
                 )
             channel_histogram = channel_histogram / channel_histogram.sum() if normalize else channel_histogram
-            self.histograms.append(channel_histogram)
+            histograms.append(channel_histogram)
 
 
-        return self.histograms
+        return histograms
     
 
 class YCbCrHistogramExtractor(HistogramExtractor):
@@ -129,20 +138,27 @@ class YCbCrHistogramExtractor(HistogramExtractor):
         super(YCbCrHistogramExtractor, self).__init__(histogram_bins)
 
     def extract(self, image_path:str, normalize = True):
-        # # Caution: image from imageio is RGB, from cv2 is BGR
-        # image = iio.imread(image_path)
-        # image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV )
-        # self.histograms = [] 
-        # # RGB mode
-        # bin_edges = np.linspace(0, 255, num=self.histogram_bins + 1)
-        # for channel in range(image.shape[2]):
-        #     single_channel_img = image[:,:,channel]
-        #     channel_histogram, bin_edges = np.histogram(
-        #         single_channel_img.flatten(),
-        #         bins=bin_edges
-        #         )
-        #     channel_histogram = channel_histogram / channel_histogram.sum() if normalize else channel_histogram
-        #     self.histograms.append(channel_histogram)
+        # Caution: image from imageio is RGB, from cv2 is BGR
+        image = iio.imread(image_path)
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2YCrCb)
+        histograms = [] 
+        # RGB mode
+        bin_edges = np.linspace(0, 255, num=self.histogram_bins + 1)
+        for channel in range(image.shape[2]):
+            single_channel_img = image[:,:,channel]
+            channel_histogram, bin_edges = np.histogram(
+                single_channel_img.flatten(),
+                bins=bin_edges
+                )
+            channel_histogram = channel_histogram / channel_histogram.sum() if normalize else channel_histogram
+            histograms.append(channel_histogram)
         
-        # return self.histograms
-        return NotImplemented
+        return histograms
+    
+class SuperHistogram(HistogramExtractor):
+    def __init__(self, histogram_bins:int = 256):
+        super(SuperHistogram, self).__init__(histogram_bins)
+        self.e1 = YCbCrHistogramExtractor(histogram_bins)
+        self.e2 = HSVHistogramExtractor(histogram_bins)
+    def extract(self, image_path:str, normalize = True):
+        return self.e1.extract(image_path, normalize) + self.e2.extract(image_path, normalize)

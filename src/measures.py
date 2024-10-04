@@ -8,6 +8,10 @@ def MeasureFactory(type:str):
         return HellingerKernelSimilarity()
     if type == "Intersection":
         return HistogramIntersectionSimilarity()
+    if type == "L1":
+        return L1Distance()
+    if type == "L2":
+        return L2Distance()
     else:
         sys.exit("ERROR: Unknow Measure type: " + type)
 
@@ -48,4 +52,25 @@ class HistogramIntersectionSimilarity(Measurement):
     def __call__(self, im1_hist : list, im2_hist : list):
         # Query and database histogram must be in the same histogram mode
         # sum min(xi,yi) for every i
-        return 1-sum ([ min(x,y) for x,y in zip(im1_hist, im2_hist) ])#its a similiratiy (the greater the better) so if we wish to treat it as a distance we should multiply by -1
+        dist = []
+        for c in range(len(im1_hist)):
+            dist.append(np.sum(np.minimum(im1_hist[c], im2_hist[c])))
+        dist = np.array(dist).mean()
+        return 1-dist
+    
+class L1Distance(Measurement):
+    def __call__(self, im1_hist:list, im2_hist:list):
+        dist = []
+        for c in range(len(im1_hist)):
+            dist.append(np.sum(np.abs(im1_hist[c]-im2_hist[c])))
+        dist = np.array(dist).mean()
+        return dist
+    
+class L2Distance(Measurement):
+    def __call__(self, im1_hist:list, im2_hist:list):
+        dist = []
+        for c in range(len(im1_hist)):
+            dist.append(np.sqrt(np.sum((im1_hist[c]-im2_hist[c])**2)))
+        dist = np.array(dist).mean()
+        return dist
+

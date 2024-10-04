@@ -32,9 +32,8 @@ def compute_performance(result, ground_truth_path, debug=False):
     #[((path_query_image, descriptor_query_image),list_Kresults) ... ]
     #sum(APk)q/Q
     Kpaths_list = [[ get_image_id(os.path.basename(os.path.abspath(path_result))) for (path_result,_,_) in lk_result] for (_,_), lk_result in result]  #[(path_result_image, metric, descriptor_result_image) ... ]
-    print()
+    print(load_ground_truth(ground_truth_path))
     gt_list = [{gt for gt in gt_arr} for gt_arr in load_ground_truth(ground_truth_path)] # a set of correct response for each query
-    
     list_apk = []
     mean_apk = 0
     for i, gt in enumerate(gt_list):
