@@ -18,7 +18,7 @@ class HistogramExtractor(object):
 
     def extract(self, image_path:str, normalize = True):
         sys.exit("ERROR: The extract method should be implementeds by a subclass")
-        # # Caution: image from imageio is RGB, from cv2 is RBG
+        # # Caution: image from imageio is RGB, from cv2 is BGR
         # image = iio.imread(image_path)
         # self.histograms = [] 
         # if self.color_mode == 'RGB':
@@ -55,7 +55,7 @@ class GrayHistogramExtractor(HistogramExtractor):
         super(GrayHistogramExtractor, self).__init__(histogram_bins)
 
     def extract(self, image_path:str, normalize = True):
-        # Caution: image from imageio is RGB, from cv2 is RBG
+        # Caution: image from imageio is RGB, from cv2 is BGR
         image = iio.imread(image_path)
         self.histograms = []
 
@@ -76,7 +76,7 @@ class RGBHistogramExtractor(HistogramExtractor):
         super(GrayHistogramExtractor, self).__init__(histogram_bins)
 
     def extract(self, image_path:str, normalize = True):
-        # Caution: image from imageio is RGB, from cv2 is RBG
+        # Caution: image from imageio is RGB, from cv2 is BGR
         image = iio.imread(image_path)
         self.histograms = [] 
         # RGB mode
