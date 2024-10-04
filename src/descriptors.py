@@ -55,4 +55,5 @@ def get_all_jpg_images(input_folder):
         if file.endswith(".jpg"):
             path = input_folder+"/"+file
             image_paths.append(path)
-    return image_paths
+
+    return sorted(image_paths)
