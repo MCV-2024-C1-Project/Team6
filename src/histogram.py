@@ -81,6 +81,7 @@ class RGBHistogramExtractor(HistogramExtractor):
         self.histograms = [] 
         # RGB mode
         bin_edges = np.linspace(0, 255, num=self.histogram_bins + 1)
+        print(image.shape)
         for channel in range(image.shape[2]):
             single_channel_img = image[:,:,channel]
             channel_histogram, bin_edges = np.histogram(
