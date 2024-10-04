@@ -65,7 +65,7 @@ if __name__ == '__main__':
     descriptor_subtype = args.descriptor_type.split("-")[1]
 
     if action == "init":
-        descriptors.generate_descriptors_DBfile(args.input, "generated_descriptors", descriptor_type, descriptor_subtype)
+        descriptors.generate_descriptors_DBfile(args.db-path, "generated_descriptors", descriptor_type, descriptor_subtype)
         #descriptor_list = src.descriptors.load_descriptors("generated_descriptors/descriptor_grayscale_20_bins.pkl")
         #print(descriptor_list)
     
