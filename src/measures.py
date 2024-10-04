@@ -12,6 +12,8 @@ def MeasureFactory(type:str):
         return L1Distance()
     if type == "L2":
         return L2Distance()
+    if type == "X2":
+        return Chi2Distance()
     else:
         sys.exit("ERROR: Unknow Measure type: " + type)
 
@@ -71,6 +73,15 @@ class L2Distance(Measurement):
         dist = []
         for c in range(len(im1_hist)):
             dist.append(np.sqrt(np.sum((im1_hist[c]-im2_hist[c])**2)))
+        dist = np.array(dist).mean()
+        return dist
+    
+class Chi2Distance(Measurement):
+    def __call__(self, im1_hist:list, im2_hist:list):
+        dist = []
+        chi2 = lambda a, b: np.sum(np.divide((a-b)**2, (a + b), out=np.zeros_like(a), where=(a + b)!=0))
+        for c in range(len(im1_hist)):
+            dist.append(chi2(im1_hist[c], im2_hist[c]))
         dist = np.array(dist).mean()
         return dist
 
