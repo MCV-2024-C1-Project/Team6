@@ -2,6 +2,7 @@ import os
 import imageio.v3 as iio
 import skimage.color 
 import numpy as np
+import sys
 
 def HistogramExtractorFactory(type:str, histogram_bins:int = 256):
     if type == "RGB":
@@ -51,7 +52,7 @@ class HistogramExtractor(object):
     
 class GrayHistogramExtractor(HistogramExtractor):
     def __init__(self, histogram_bins:int = 256):
-        HistogramExtractor.__init__(histogram_bins)
+        super(GrayHistogramExtractor, self).__init__(histogram_bins)
 
     def extract(self, image_path:str, normalize = True):
         # Caution: image from imageio is RGB, from cv2 is RBG
@@ -72,7 +73,7 @@ class GrayHistogramExtractor(HistogramExtractor):
 
 class RGBHistogramExtractor(HistogramExtractor):
     def __init__(self, histogram_bins:int = 256):
-        HistogramExtractor.__init__(histogram_bins)
+        super(GrayHistogramExtractor, self).__init__(histogram_bins)
 
     def extract(self, image_path:str, normalize = True):
         # Caution: image from imageio is RGB, from cv2 is RBG

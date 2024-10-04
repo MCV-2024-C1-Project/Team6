@@ -6,6 +6,8 @@ import sys
 import math
 import src.descriptors as descriptors
 import src.query as query
+from src.plotting import plot_result
+
 
 DATABASE_PATH = "./"
 
@@ -58,9 +60,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     action = args.action
-    k = args.result-number
-    descriptor_type = args.split("-")[0]
-    descriptor_subtype = args.split("-")[1]
+    k = args.result_number
+    descriptor_type = args.descriptor_type.split("-")[0]
+    descriptor_subtype = args.descriptor_type.split("-")[1]
 
     if action == "init":
         descriptors.generate_descriptors_DBfile(args.input, "generated_descriptors", descriptor_type, descriptor_subtype)
@@ -69,16 +71,15 @@ if __name__ == '__main__':
     
     elif action == "predict":
         result_list = query.prediction(args.input, "generated_descriptors", k, descriptor_type, descriptor_subtype, single_image=True) #returns a list of tuples, (path, metric)
-        print("Result for the first" + k + " images, for the query :" + args.input)
-        for path, score in result_list:
-            print("Image: " + path + " with score: " + str(score))
+        for query_input, score_list in result_list:
+            print(f"Result for the first {k} images, for the query : {query_input[0]}")
+            plot_result(query_input, score_list)
 
     elif action == "batch-predict":
         result_list = query.prediction(args.input, "generated_descriptors", k, descriptor_type, descriptor_subtype) #returns a list of tuples, each element being (input_query_image_path, list of tuples (path_resulting_image, metric))
-        for query_image_path, score_list in result_list:
-            print("Result for the first" + k + " images, for the query :" + query_image_path)
-            for path, score in score_list:
-                print("Image: " + path + " with score: " + str(score))
+        for query_input, score_list in result_list:
+            print(f"Result for the first {k} images, for the query : {query_input[0]}")
+            plot_result(query_input, score_list)
 
     elif action == "evaluate":
         pass

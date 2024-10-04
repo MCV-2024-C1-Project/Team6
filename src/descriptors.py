@@ -26,6 +26,7 @@ def compute_descriptor(path, type, subtype, num_bins=256):
 def generate_descriptors_DBfile(input_folder, output_folder, descriptor_type, descriptor_subtype, num_bins=256):
 
     image_paths = get_all_jpg_images(input_folder)
+    descriptor_list = []
     for path in image_paths:
         descriptor = compute_descriptor(path, descriptor_type, descriptor_subtype, num_bins)
         descriptor_list.append( (path, descriptor) ) #changed from array to tuple, more easily iteratable
@@ -33,15 +34,16 @@ def generate_descriptors_DBfile(input_folder, output_folder, descriptor_type, de
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    descriptor_name = f"descriptor_{descriptor_subtype.lower()}scale_{num_bins}_bins.pkl"
+    descriptor_name = f"descriptor_{descriptor_type.lower()}_{descriptor_subtype.lower()}_{num_bins}_bins.pkl"
     with open(output_folder+"/"+descriptor_name, "wb") as f:
         pickle.dump(descriptor_list,f)
         
     print(f"List saved to {output_folder+'/'+descriptor_name}")
             
 #retrieve pairs of (photo_path, descriptor) from pkl file
-def load_descriptors(input_folder):
-    with open(input_folder,"rb") as f:
+def load_descriptors(input_folder, descriptor_type, descriptor_subtype, num_bins=256):
+    descriptor_name = f"descriptor_{descriptor_type.lower()}_{descriptor_subtype.lower()}_{num_bins}_bins.pkl"
+    with open(os.path.join(input_folder, descriptor_name),"rb") as f:
         descriptor_list = pickle.load(f)
     return descriptor_list
 
