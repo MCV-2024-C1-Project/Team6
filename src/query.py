@@ -4,6 +4,7 @@ from src.descriptors import compute_descriptor
 from src.descriptors import get_all_jpg_images
 from src.descriptors import load_descriptors
 from src.measures import MeasureFactory
+from src.performance import compute_performance
 
 def retrieve_K(descriptor, db_descriptor, k):
     measure = MeasureFactory("HellingerKernel")
@@ -19,11 +20,12 @@ def prediction(input_path, db_path, k, descriptor_type, descriptor_subtype, eval
 
     for path in image_paths:
         descriptor = compute_descriptor(path, descriptor_type, descriptor_subtype)
-        k_result = retrieve_K(descriptor, db_descriptor, k) # [(path_resulting_image, metric) ... ]
-        result.append( ((path, descriptor), k_result) ) # [(path_query_image, (path_resulting_image, metric)) ... ]
+        k_result = retrieve_K(descriptor, db_descriptor, k) # listKresults = [(path_result_image, metric, descriptor_result_image) ... ]
+        result.append( ((path, descriptor), k_result) ) # [((path_query_image, descriptor_query_image),list_Kresults) ... ]
     
     if evaluate:
         #TODO compute hte mAP@K
-        pass
+        mapk = compute_performance(result, len(image_paths)) # we require
+        return (mapK,result)
     else:
         return result
