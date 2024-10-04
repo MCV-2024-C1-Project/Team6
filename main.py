@@ -22,13 +22,13 @@ if __name__ == '__main__':
     #evaluate: same as batch-predict but with precision metrics using ground truth assuming it's present in input folder.
     parser.add_argument('--action', 
                         required=True,
-                        choices=["init","predict","batch-predict", "evaluate"],
+                        choices=["init","predict","batch-predict", "evaluate", "test"],
                         default="", 
                         help='action to perform')
     
     parser.add_argument('--input', 
                         required=False,
-                        default="qst1_w1/", 
+                        default="qsd1_w1/", 
                         help='input argument')
     
     
@@ -37,7 +37,7 @@ if __name__ == '__main__':
                         default="results/", 
                         help='Number of results')
 
-    parser.add_argument('--result-number', 
+    parser.add_argument('--result_number', 
                         required=False, 
                         default=1, 
                         help='Number of results to return, a.k.a K')
@@ -47,12 +47,12 @@ if __name__ == '__main__':
                         default="HellingerKernel", 
                         help='Metric used to compute distance between images')
     
-    parser.add_argument('--descriptor-type', 
+    parser.add_argument('--descriptor_type', 
                         required=False, 
                         default="Histogram-RGB", 
                         help='Descriptor type to be used, with the format "type-subtype"')
 
-    parser.add_argument('--db-path', 
+    parser.add_argument('--db_path', 
                         required=False, 
                         default="BBDD/", 
                         help='Descriptor type to be used, with the format "type-subtype"')
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     action = args.action
-    k = args.result_number
+    k = int(args.result_number)
     descriptor_type = args.descriptor_type.split("-")[0]
     descriptor_subtype = args.descriptor_type.split("-")[1]
 
@@ -82,7 +82,18 @@ if __name__ == '__main__':
             plot_result(query_input, score_list)
 
     elif action == "evaluate":
-        pass
+        score, apk_list, result_list = query.prediction(args.input, "generated_descriptors", k, descriptor_type, descriptor_subtype, evaluate=True) #returns a list of tuples, each element being (input_query_image_path, list of tuples (path_resulting_image, metric))
+        for i, (query_input, score_list) in enumerate(result_list):
+            print(f"Result for the first {k} images, for the query : {query_input[0]}, Performance(AP@K): {apk_list[i]}")
+            plot_result(query_input, score_list, apk_list[i])
+        print(f"Performance score (MAP@K): {score}")
+
+    elif action == "test":
+        result_list = query.prediction(args.input, "generated_descriptors", k, descriptor_type, descriptor_subtype)
+        for query_input, score_list in result_list:
+            print(f"Result for the first {k} images, for the query : {query_input[0]}")
+            plot_result(query_input, score_list)
+        #TODO: add the generation of the pickle file
 
     else:
         pass
