@@ -8,9 +8,9 @@ import cv2
 HistogramComponents = {
     'RGB': ['Red', 'Green', 'Blue'],
     'GRAY': ['Gray'],
-    'HSV': ['Hue', 'Staturation', 'Value'],
-    'YCbCr': ['Luminity', 'Color b', 'Color r'],
-    'Super': ['Luminity', 'Color b', 'Color r']+['Hue', 'Staturation', 'Value'],
+    'HSV': ['Hue', 'Saturation', 'Value'],
+    'YCbCr': ['Luma', 'Cb', 'Cr'],
+    'Super': ['Luma', 'Cb', 'Cr']+['Hue', 'Saturation', 'Value'],
 }
 
 def HistogramExtractorFactory(type:str, histogram_bins:int = 256):

@@ -2,7 +2,9 @@
 generated_descriptors/
 BBDD/
 qsd1_w1/
+qst1_w1
 results/
+fake/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -2,6 +2,12 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import numpy as np
 import os
+import re
+def image_name_to_id(image_name):
+    match = re.search(r'(\d+)', image_name)
+    if match:
+        return int(match.group(1))
+    return -1
 
 class ImageNavigator:
     def __init__(self, results, feature_names):
@@ -42,7 +48,7 @@ class ImageNavigator:
         ax = self.fig.add_subplot(gs[0, 0])
         self.axes[0, 0] = ax
         ax.imshow(input_image)
-        ax.set_title(f"Input Image: {os.path.basename(input_image_path)} {string_score}")
+        ax.set_title(f"{image_name_to_id(os.path.basename(input_image_path))} {string_score}")
         ax.axis('off')
 
         # Plot features of the input image
@@ -61,7 +67,7 @@ class ImageNavigator:
             ax = self.fig.add_subplot(gs[i + 1, 0])
             self.axes[i + 1, 0] = ax
             ax.imshow(sim_image)
-            ax.set_title(f"{i + 1}: {os.path.basename(sim_path)} | Distance: {sim_metric:.2f}")
+            ax.set_title(f"{i + 1}: {image_name_to_id(os.path.basename(sim_path))} | Distance: {sim_metric:.2f}")
             ax.axis('off')
 
             for col in range(1, num_cols):

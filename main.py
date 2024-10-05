@@ -35,9 +35,9 @@ def predict_command(args):
                               evaluate=args.evaluate) # mapk, apk, (path, dist, raw_dist, db_image_descriptor)
     feature_ids = HistogramComponents[descriptor_subtype]
     output_result = []
+    plotting_results = []
     if args.evaluate:
         score, apk_list, result_list = result
-        plotting_results = []
         for i, (query_input, score_list) in enumerate(result_list):
             result_names = [s[0] for s in score_list]
             output_result.append([image_name_to_id(name) for name in result_names])
