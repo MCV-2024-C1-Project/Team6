@@ -5,7 +5,7 @@ import csv
 import math
 import src.descriptors as descriptors
 import src.query as query
-from src.plotting import plot_result
+from src.plotting import ImageNavigator
 from src.histogram import HistogramComponents
 import re
 import pickle
@@ -37,12 +37,12 @@ def predict_command(args):
     output_result = []
     if args.evaluate:
         score, apk_list, result_list = result
+        results = []
         for i, (query_input, score_list) in enumerate(result_list):
             result_names = [s[0] for s in score_list]
             output_result.append([image_name_to_id(name) for name in result_names])
             print(f"{query_input[0]} ==> {result_names} | Performance(AP@K): {apk_list[i]}")
-            if args.plot:
-                plot_result(query_input, score_list, feature_ids, apk=apk_list[i])
+            results.append((query_input, score_list, apk_list[i]))
         print(f"Performance score (MAP@K): {score}")
     else:
         result_list = result
@@ -50,8 +50,10 @@ def predict_command(args):
             result_names = [s[0] for s in score_list]
             output_result.append([image_name_to_id(name) for name in result_names])
             print(f"{query_input[0]} ==> {result_names}")
-            if args.plot:
-                plot_result(query_input, score_list, feature_ids)
+            results.append((query_input, score_list, None))
+    if args.plot:
+        navigator = ImageNavigator(results, feature_ids)
+        navigator.show()
     if args.save_output:
         output_path = args.output
         if not os.path.exists(output_path):

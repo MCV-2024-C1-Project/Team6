@@ -14,6 +14,8 @@ def MeasureFactory(type:str):
         return L2Distance()
     if type == "X2":
         return Chi2Distance()
+    if type == "LInfinity":
+        return LInfinityDistance()
     else:
         sys.exit("ERROR: Unknow Measure type: " + type)
 
@@ -85,3 +87,12 @@ class Chi2Distance(Measurement):
         dist = np.array(dist).mean()
         return dist
 
+class LInfinityDistance(Measurement):
+    def __call__(self, im1_hist: list, im2_hist: list):
+        if len(im1_hist) != len(im2_hist):
+            sys.exit("ERROR: Histograms must have the same length")
+        dist = []
+        for c in range(len(im1_hist)):
+            dist.append(np.max(np.abs(np.array(im1_hist[c]) - np.array(im2_hist[c]))))
+        dist = np.array(dist).mean()
+        return dist
