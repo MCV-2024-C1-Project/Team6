@@ -32,17 +32,17 @@ def predict_command(args):
                               int(num_bins),
                               args.measure,
                               single_image=single_image, 
-                              evaluate=args.evaluate)
+                              evaluate=args.evaluate) # mapk, apk, (path, dist, raw_dist, db_image_descriptor)
     feature_ids = HistogramComponents[descriptor_subtype]
     output_result = []
     if args.evaluate:
         score, apk_list, result_list = result
-        results = []
+        plotting_results = []
         for i, (query_input, score_list) in enumerate(result_list):
             result_names = [s[0] for s in score_list]
             output_result.append([image_name_to_id(name) for name in result_names])
             print(f"{query_input[0]} ==> {result_names} | Performance(AP@K): {apk_list[i]}")
-            results.append((query_input, score_list, apk_list[i]))
+            plotting_results.append((query_input, score_list, apk_list[i]))
         print(f"Performance score (MAP@K): {score}")
     else:
         result_list = result
@@ -50,9 +50,9 @@ def predict_command(args):
             result_names = [s[0] for s in score_list]
             output_result.append([image_name_to_id(name) for name in result_names])
             print(f"{query_input[0]} ==> {result_names}")
-            results.append((query_input, score_list, None))
+            plotting_results.append((query_input, score_list, None))
     if args.plot:
-        navigator = ImageNavigator(results, feature_ids)
+        navigator = ImageNavigator(plotting_results, feature_ids)
         navigator.show()
     if args.save_output:
         output_path = args.output

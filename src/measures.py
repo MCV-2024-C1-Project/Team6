@@ -25,16 +25,7 @@ class Measurement(object):
 
     def __call__(self, im1_hist : list, im2_hist : list):
         sys.exit("ERROR: The __call__ method should be implemented by a subclass")
-        # # Query and database histogram must be in the same histogram mode
-        # if self.metric == 'HellingerKernel':
-        #     dist = []
-        #     for c in range(len(im1_hist)):
-        #         dist.append(np.sum(np.sqrt(im1_hist[c] * im2_hist[c])))
-        #     dist = np.array(dist).mean()
-        #     return dist
-        # else:
-        #     #Placeholder
-        #     return None
+
 
 class HellingerKernelSimilarity(Measurement):
     def __init__(self):
@@ -45,8 +36,8 @@ class HellingerKernelSimilarity(Measurement):
         dist = []
         for c in range(len(im1_hist)):
             dist.append(np.sum(np.sqrt(im1_hist[c] * im2_hist[c])))
-        dist = np.array(dist).mean()
-        return 1-dist #its a similiratiy (the greater the better) so if we wish to treat it as a distance we should multiply by -1
+        final_dist = np.array(dist).mean()
+        return 1-final_dist, [1-d for d in dist]  #its a similiratiy (the greater the better) so if we wish to treat it as a distance we should multiply by -1
 
 class HistogramIntersectionSimilarity(Measurement):
     #TODO TEST to ensure correct working
@@ -59,24 +50,24 @@ class HistogramIntersectionSimilarity(Measurement):
         dist = []
         for c in range(len(im1_hist)):
             dist.append(np.sum(np.minimum(im1_hist[c], im2_hist[c])))
-        dist = np.array(dist).mean()
-        return 1-dist
+        final_dist = np.array(dist).mean()
+        return 1-final_dist, [1-d for d in dist]
     
 class L1Distance(Measurement):
     def __call__(self, im1_hist:list, im2_hist:list):
         dist = []
         for c in range(len(im1_hist)):
             dist.append(np.sum(np.abs(im1_hist[c]-im2_hist[c])))
-        dist = np.array(dist).mean()
-        return dist
+        final_dist = np.array(dist).mean()
+        return final_dist, dist
     
 class L2Distance(Measurement):
     def __call__(self, im1_hist:list, im2_hist:list):
         dist = []
         for c in range(len(im1_hist)):
             dist.append(np.sqrt(np.sum((im1_hist[c]-im2_hist[c])**2)))
-        dist = np.array(dist).mean()
-        return dist
+        final_dist = np.array(dist).mean()
+        return final_dist, dist
     
 class Chi2Distance(Measurement):
     def __call__(self, im1_hist:list, im2_hist:list):
@@ -84,8 +75,8 @@ class Chi2Distance(Measurement):
         chi2 = lambda a, b: np.sum(np.divide((a-b)**2, (a + b), out=np.zeros_like(a), where=(a + b)!=0))
         for c in range(len(im1_hist)):
             dist.append(chi2(im1_hist[c], im2_hist[c]))
-        dist = np.array(dist).mean()
-        return dist
+        final_dist = np.array(dist).mean()
+        return final_dist, dist
 
 class LInfinityDistance(Measurement):
     def __call__(self, im1_hist: list, im2_hist: list):
@@ -94,5 +85,5 @@ class LInfinityDistance(Measurement):
         dist = []
         for c in range(len(im1_hist)):
             dist.append(np.max(np.abs(np.array(im1_hist[c]) - np.array(im2_hist[c]))))
-        dist = np.array(dist).mean()
-        return dist
+        final_dist = np.array(dist).mean()
+        return final_dist, dist

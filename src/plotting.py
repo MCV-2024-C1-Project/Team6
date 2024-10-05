@@ -5,13 +5,6 @@ import os
 
 class ImageNavigator:
     def __init__(self, results, feature_names):
-        """
-        Initialize the ImageNavigator with results and feature names.
-
-        Parameters:
-            results (list): A list of tuples (query_input, score_list, apk).
-            feature_names (list): A list of feature names for plotting.
-        """
         self.results = results  # List of (query_input, score_list, apk)
         self.feature_names = feature_names
         self.index = 0  # Current index in the results list
@@ -34,6 +27,7 @@ class ImageNavigator:
         similar_paths = [f[0] for f in score_list]
         similar_images = [Image.open(f[0]) for f in score_list]
         similar_scores = [f[1] for f in score_list]
+        similar_raw_scores = [f[3] for f in score_list]
         similar_features = [f[2] for f in score_list]
         string_score = f"| Performance: {apk:.2f}" if apk is not None else ""
 
@@ -63,7 +57,7 @@ class ImageNavigator:
             ax.set_yticks([])
 
         # Plot similar images and their features
-        for i, (sim_path, sim_image, sim_metric) in enumerate(zip(similar_paths, similar_images, similar_scores)):
+        for i, (sim_path, sim_image, sim_metric, raw_sim_metric) in enumerate(zip(similar_paths, similar_images, similar_scores, similar_raw_scores)):
             ax = self.fig.add_subplot(gs[i + 1, 0])
             self.axes[i + 1, 0] = ax
             ax.imshow(sim_image)
@@ -76,7 +70,7 @@ class ImageNavigator:
                 x = np.arange(len(similar_features[i][col - 1]))
                 ax.plot(x, similar_features[i][col - 1], color='orange')
                 ax.fill_between(x, similar_features[i][col - 1], color='orange', alpha=0.3)
-                ax.set_title(f"{self.feature_names[col - 1]} - Similar Image {i + 1}")
+                ax.set_title(f"{self.feature_names[col - 1]} - Distance: {raw_sim_metric[col-1]:.2f}")
                 ax.set_xticks([])
                 ax.set_yticks([])
 

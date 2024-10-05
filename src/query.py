@@ -11,7 +11,10 @@ from src.performance import compute_performance
 def retrieve_K(descriptor, db_descriptor, measure, k):
     measure = MeasureFactory(measure)
     # first interation can  been improved O(n²) depending of sort implementation
-    result = [(path, measure(descriptor,db_image_descriptor), db_image_descriptor) for path, db_image_descriptor in db_descriptor]
+    result = []
+    for path, db_image_descriptor in db_descriptor:
+        dist, raw_dist = measure(descriptor,db_image_descriptor)
+        result.append((path, dist, db_image_descriptor, raw_dist))
     result = sorted(result, key=lambda x: x[1]) # we sort the list by using a function that extract the score
     return result[:k] # return the first k element of the list
 
@@ -23,7 +26,7 @@ def prediction(input_path, db_path, k, descriptor_type, descriptor_subtype, num_
 
     for path in image_paths:
         descriptor = compute_descriptor(path, descriptor_type, descriptor_subtype, num_bins=num_bins)
-        k_result = retrieve_K(descriptor, db_descriptor, measure, k) # listKresults = [(path_result_image, metric, descriptor_result_image) ... ]
+        k_result = retrieve_K(descriptor, db_descriptor, measure, k) # listKresults = [(path_result_image, metric, descriptor_result_image, raw_metric) ... ]
         result.append( ((path, descriptor), k_result) ) # [((path_query_image, descriptor_query_image),list_Kresults) ... ]
     
     if evaluate:
