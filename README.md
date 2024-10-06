@@ -157,11 +157,11 @@ python main.py predict --input <path_to_query_images> --result-number K --descri
 
 * --input: Path to the input image or folder. Default is qsd1_w1/.
 * --result-number: Number of top results to return (K). Default is 1.
-* --descriptor-type: Descriptor type to be used, in the format Histogram-<color_mode>-<histogram_bins>. Default is Histogram-RGB-64.
-* --measure: Measure function to be used for similarity ranking. Default is HellingerKernel.
+* --descriptor-type: Descriptor type to be used, in the format Histogram-<color_mode>-<histogram_bins>. Default is Histogram-Super-64.
+* --measure: Measure function to be used for similarity ranking. Default is HellingerKernel-Median.
 * --plot: If set, show result plots.
 * --evaluate: If set, perform evaluation using ground truth.
-* --save-output: If set, save the prediction results to a CSV file.
+* --save-output: If set, save the prediction results to a pickle file.
 * --output: Directory to save output files if --save-output is set. Default is results/.
 
 **Available Similarity Measures:**
