@@ -10,6 +10,8 @@ def MeasureFactory(type:str):
         return HellingerKernelMedianSimilarity()
     if type == "Intersection":
         return HistogramIntersectionSimilarity()
+    if type == "Intersection-Median":
+        return HistogramIntersectionMedianSimilarity()
     if type == "L1":
         return L1Distance()
     if type == "L1-Median":
@@ -22,6 +24,8 @@ def MeasureFactory(type:str):
         return Chi2MedianDistance()
     if type == "LInfinity":
         return LInfinityDistance()
+    if type == "KLD-Median":
+        return KLDivergenceMedian()
     else:
         sys.exit("ERROR: Unknow Measure type: " + type)
 
@@ -70,6 +74,20 @@ class HistogramIntersectionSimilarity(Measurement):
         for c in range(len(im1_hist)):
             dist.append(np.sum(np.minimum(im1_hist[c], im2_hist[c])))
         final_dist = np.array(dist).mean()
+        return 1-final_dist, [1-d for d in dist]
+    
+class HistogramIntersectionMedianSimilarity(Measurement):
+    #TODO TEST to ensure correct working
+    def __init__(self):
+        pass
+
+    def __call__(self, im1_hist : list, im2_hist : list):
+        # Query and database histogram must be in the same histogram mode
+        # sum min(xi,yi) for every i
+        dist = []
+        for c in range(len(im1_hist)):
+            dist.append(np.sum(np.minimum(im1_hist[c], im2_hist[c])))
+        final_dist = np.median(np.array(dist))
         return 1-final_dist, [1-d for d in dist]
     
 class L1Distance(Measurement):
@@ -123,3 +141,14 @@ class LInfinityDistance(Measurement):
             dist.append(np.max(np.abs(np.array(im1_hist[c]) - np.array(im2_hist[c]))))
         final_dist = np.array(dist).mean()
         return final_dist, dist
+    
+class KLDivergenceMedian(Measurement):
+    def __call__(self, im1_hist: list, im2_hist: list):
+        dist = []
+        for c in range(len(im1_hist)):
+            P = im1_hist[c] + 1e-6
+            Q = im2_hist[c] + 1e-6
+            kld = np.sum(P*np.log(P/Q))
+            dist.append(kld)
+        final_dist = np.median(np.array(dist))
+        return final_dist,  dist

@@ -85,11 +85,14 @@ class HSVHistogramExtractor(HistogramExtractor):
         # Caution: image from imageio is RGB, from cv2 is BGR
         image = iio.imread(image_path)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-
         histograms = [] 
         # RGB mode
         bin_edges = np.linspace(0, 255, num=self.histogram_bins + 1)
-        for channel in range(image.shape[2]):
+        v_channel = image[:, :, -1]
+        v_channel = ((v_channel - v_channel.mean()) / (v_channel.std()+1e-10))
+        
+        v_bin_edges = np.linspace(-10, 10, num=self.histogram_bins + 1)
+        for channel in range(image.shape[2]-1):
             single_channel_img = image[:,:,channel]
             channel_histogram, bin_edges = np.histogram(
                 single_channel_img.flatten(),
@@ -97,6 +100,12 @@ class HSVHistogramExtractor(HistogramExtractor):
                 )
             channel_histogram = channel_histogram / channel_histogram.sum() if normalize else channel_histogram
             histograms.append(channel_histogram)
+        v_histogram, bin_edges = np.histogram(
+                v_channel.flatten(),
+                bins=v_bin_edges
+                )
+        v_histogram = v_histogram / v_histogram.sum() if normalize else v_histogram
+        histograms.append(v_histogram)
 
 
         return histograms
@@ -113,7 +122,17 @@ class YCbCrHistogramExtractor(HistogramExtractor):
         histograms = [] 
         # RGB mode
         bin_edges = np.linspace(0, 255, num=self.histogram_bins + 1)
-        for channel in range(image.shape[2]):
+        y_channel = image[:, :, 0]
+        y_channel = ((y_channel - y_channel.mean()) / (y_channel.std()+1e-10))
+        
+        y_bin_edges = np.linspace(-10, 10, num=self.histogram_bins + 1)
+        y_histogram, y_bin_edges = np.histogram(
+                y_channel.flatten(),
+                bins=y_bin_edges
+                )
+        y_histogram = y_histogram / y_histogram.sum() if normalize else y_histogram
+        histograms.append(y_histogram)
+        for channel in range(1,image.shape[2]):
             single_channel_img = image[:,:,channel]
             channel_histogram, bin_edges = np.histogram(
                 single_channel_img.flatten(),
