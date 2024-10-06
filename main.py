@@ -51,9 +51,7 @@ def predict_command(args):
             output_result.append([image_name_to_id(name) for name in result_names])
             print(f"{query_input[0]} ==> {result_names}")
             plotting_results.append((query_input, score_list, None))
-    if args.plot:
-        navigator = ImageNavigator(plotting_results, feature_ids)
-        navigator.show()
+            
     if args.save_output:
         output_path = args.output
         if not os.path.exists(output_path):
@@ -61,6 +59,10 @@ def predict_command(args):
         print(output_result)
         with open(os.path.join(output_path, "result.pkl"), "wb") as f:
             pickle.dump(output_result, f)
+    if args.plot:
+        navigator = ImageNavigator(plotting_results, feature_ids)
+        navigator.show()
+    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Image processing tool with different subcommands')
