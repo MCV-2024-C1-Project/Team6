@@ -19,7 +19,8 @@ def compute_descriptor(path, type, subtype, num_bins=256):
     descriptor_list = []
     
     hist_extractor = HistogramExtractorFactory(type = color_mode, histogram_bins = num_bins)
-    return hist_extractor.extract(path)
+    
+    return hist_extractor.extract(iio.imread(path))
 
 
 #maybe change the name to save descriptors?
