@@ -1,8 +1,12 @@
-# TEAM 6 PROJECT: IMAGE RETRIEVAL BY HISTOGRAM OF COLOR
+# PROJECT: IMAGE RETRIEVAL
 
 ## Description
 
-This project implements an image retrieval system that uses color histograms as image descriptors to find the most similar images in a museum dataset. For each image in the query dataset, the system retrieves the top K most similar images from the museum dataset, ordered by their similarity scores.
+This project implements an image retrieval system that uses many types of image descriptors (color, texture, keypoints, etc.) to find the most similar images in a museum dataset. For each image in the query dataset, the system retrieves the top K most similar images from the museum dataset, ordered by their similarity scores. 
+
+* Week 1: Build retrieval system based on 1D histogram of color.
+* Week 2:
+
 
 ## Table of Contents
 
