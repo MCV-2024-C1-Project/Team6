@@ -6,7 +6,7 @@ import math
 import src.descriptors as descriptors
 import src.query as query
 from src.plotting import ImageNavigator
-from src.histogram import HistogramComponents
+from src.histogram import getHistogramComponents
 import re
 import pickle
 
@@ -33,7 +33,7 @@ def predict_command(args):
                               args.measure,
                               single_image=single_image, 
                               evaluate=args.evaluate) # mapk, apk, (path, dist, raw_dist, db_image_descriptor)
-    feature_ids = HistogramComponents[descriptor_subtype]
+    feature_ids = getHistogramComponents(descriptor_subtype)
     output_result = []
     plotting_results = []
     if args.evaluate:
