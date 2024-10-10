@@ -63,7 +63,6 @@ class HellingerKernelMedianSimilarity(Measurement):
 
 
 class HistogramIntersectionSimilarity(Measurement):
-    #TODO TEST to ensure correct working
     def __init__(self):
         pass
 
