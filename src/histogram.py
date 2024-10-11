@@ -9,9 +9,11 @@ import matplotlib.pyplot as plt
 intermediate_image_path="intermediate_imgs/"
 HistogramComponents = {
     'RGB': ['Red', 'Green', 'Blue'],
+    'RGB3D': ['RGB3d'],
     'GRAY': ['Gray'],
     'HSV': ['Hue', 'Saturation', 'Value'],
     'YCbCr': ['Luma', 'Cb', 'Cr'],
+    'YCbCr2D': ['Luma', 'CbCr'],
     'Super': ['Luma', 'Cb', 'Cr']+['Hue', 'Saturation', 'Value'],
     
 }
@@ -46,6 +48,10 @@ def HistogramExtractorFactory(type:str, histogram_bins:int = 256):
         return YCbCrHistogramExtractor(histogram_bins)
     elif type == 'Super':
         return SuperHistogram(histogram_bins)
+    elif type == 'YCbCr2D':
+        return YCbCr2DHistogramExtractor(histogram_bins)
+    elif type == 'RGB3D':
+        return RGB3DHistogramExtractor(histogram_bins)
     elif type[:5] == 'Block':
         #Block_4_HSV
         _, str_number_blocks, hist_type = type.split("_")
@@ -109,24 +115,20 @@ class RGBHistogramExtractor(HistogramExtractor):
 
 class RGB3DHistogramExtractor(HistogramExtractor):
     def __init__(self, histogram_bins:int = 256):
-        super(RGBHistogramExtractor, self).__init__(histogram_bins)
+        super(RGB3DHistogramExtractor, self).__init__(histogram_bins)
 
     def extract(self, image, normalize = True):
         # Caution: image from imageio is RGB, from cv2 is BGR
-        histograms = [] 
         # RGB mode
-        bin_edges = np.linspace(0, 255, num=self.histogram_bins + 1)
+        bin_edges = np.linspace(0, 255, num=self.histogram_bins)
+        red_channel = image[:,:,0].flatten()
+        green_channel = image[:,:,1].flatten()
+        blue_channel = image[:,:,2].flatten()
+        histogram,_ = np.histogramdd([red_channel, green_channel, blue_channel], bins=[bin_edges]*3)
+        if normalize:
+            histogram = histogram / histogram.sum()
         
-        for channel in range(image.shape[2]):
-            single_channel_img = image[:,:,channel]
-            channel_histogram, bin_edges = np.histogram(
-                single_channel_img.flatten(),
-                bins=bin_edges
-                )
-            channel_histogram = channel_histogram / channel_histogram.sum() if normalize else channel_histogram
-            histograms.append(channel_histogram)
-        
-        return histograms
+        return [histogram]
 
 class HSVHistogramExtractor(HistogramExtractor):
     def __init__(self, histogram_bins:int = 256):
@@ -190,7 +192,38 @@ class YCbCrHistogramExtractor(HistogramExtractor):
             histograms.append(channel_histogram)
         
         return histograms
-    
+
+class YCbCr2DHistogramExtractor(HistogramExtractor):
+    def __init__(self, histogram_bins:int = 256):
+        super(YCbCr2DHistogramExtractor, self).__init__(histogram_bins)
+
+    def extract(self, image_input, normalize = True):
+        # Caution: image from imageio is RGB, from cv2 is BGR
+        image = cv2.cvtColor(image_input, cv2.COLOR_RGB2YCrCb)
+        histograms = [] 
+        # RGB mode
+        bin_edges = np.linspace(0, 255, num=self.histogram_bins)
+        #Y is computed in 1D
+        y_channel = image[:, :, 0]
+        y_channel = ((y_channel - y_channel.mean()) / (y_channel.std()+1e-10))
+        y_bin_edges = np.linspace(-10, 10, num=self.histogram_bins)
+        y_histogram, y_bin_edges = np.histogram(
+                y_channel.flatten(),
+                bins=y_bin_edges
+                )
+        y_histogram = y_histogram / y_histogram.sum() if normalize else y_histogram
+        histograms.append(y_histogram)
+        
+        #cb and cr 2d histogram
+        cb_channel_img = image[:,:,1].flatten()
+        cr_channel_img = image[:,:,2].flatten()
+        cbcr_histogram,_ = np.histogramdd([cb_channel_img, cr_channel_img], bins=[bin_edges]*2)
+        cbcr_histogram = cbcr_histogram / cbcr_histogram.sum() if normalize else cbcr_histogram
+        histograms.append(cbcr_histogram)
+        
+        #return 1d y hist and cbcbr 2d hist
+        return histograms
+
 class SuperHistogram(HistogramExtractor):
     def __init__(self, histogram_bins:int = 256):
         super(SuperHistogram, self).__init__(histogram_bins)
