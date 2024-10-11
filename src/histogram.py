@@ -106,7 +106,28 @@ class RGBHistogramExtractor(HistogramExtractor):
             histograms.append(channel_histogram)
         
         return histograms
-    
+
+class RGB3DHistogramExtractor(HistogramExtractor):
+    def __init__(self, histogram_bins:int = 256):
+        super(RGBHistogramExtractor, self).__init__(histogram_bins)
+
+    def extract(self, image, normalize = True):
+        # Caution: image from imageio is RGB, from cv2 is BGR
+        histograms = [] 
+        # RGB mode
+        bin_edges = np.linspace(0, 255, num=self.histogram_bins + 1)
+        
+        for channel in range(image.shape[2]):
+            single_channel_img = image[:,:,channel]
+            channel_histogram, bin_edges = np.histogram(
+                single_channel_img.flatten(),
+                bins=bin_edges
+                )
+            channel_histogram = channel_histogram / channel_histogram.sum() if normalize else channel_histogram
+            histograms.append(channel_histogram)
+        
+        return histograms
+
 class HSVHistogramExtractor(HistogramExtractor):
     def __init__(self, histogram_bins:int = 256):
         super(HSVHistogramExtractor, self).__init__(histogram_bins)
