@@ -1,6 +1,7 @@
 #DATA FOLDERS
 generated_descriptors/
 BBDD/
+data/
 qsd1_w1/
 qst1_w1
 results/

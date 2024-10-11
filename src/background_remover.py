@@ -7,7 +7,6 @@ import cv2
 
 #background removal function
 def remove_background(image,depth, K, sample_frequency,kernel):
-    
     shape = image.shape
     color_samples = []
 
@@ -138,6 +137,6 @@ def test_background_removal(input_folder,output_folder,plot = False, depth = 8, 
     print(f'prec: {prec}, recall: {recall}, f1: {f1}')
 
 if __name__ == '__main__':
-    dataset_folder = "target/qsd2_w1"
-    output_folder = "target/plots"
-    test_background_removal(dataset_folder,output_folder,plot=False)
+    dataset_folder = "data/week2/qsd2_w2"
+    output_folder = "data/week2/plots"
+    test_background_removal(dataset_folder,output_folder,plot=True)
