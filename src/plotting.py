@@ -3,6 +3,7 @@ from PIL import Image
 import numpy as np
 import os
 import re
+import matplotlib.animation as animation
 def image_name_to_id(image_name):
     match = re.search(r'(\d+)', image_name)
     if match:
@@ -99,3 +100,61 @@ class ImageNavigator:
 
     def show(self):
         plt.show()
+
+
+def show_image3d(image, axis='axial', aspect=1, vmin=None, vmax=None, cmap='magma', max_slices=100, mask=None, target=None, figsize=(6,6), save=False, show=True):
+    if axis=='axial':
+        frames = lambda i: image[i]
+        mask_frames = lambda i: mask[i]
+        target_frames = lambda i: target[i]
+        ns = image.shape[0]
+        origin='upper'
+    elif axis=='sagittal':
+        frames = lambda i: image[:,:,i]
+        mask_frames = lambda i: mask[:,:,i]
+        target_frames = lambda i: target[:,:,i]
+        ns = image.shape[2]
+        origin='lower'
+    elif axis=='coronal':
+        frames = lambda i: image[:,i,:]
+        mask_frames = lambda i: mask[:,i,:]
+        target_frames = lambda i: target[:,i,:]
+        ns = image.shape[1]
+        origin='lower'
+    else:
+        raise ValueError(f'Invalid axis{axis}!')
+
+    nf = min(max_slices, ns)
+    x = [int(i*ns / nf) for i in range(nf)]
+    fig, ax = plt.subplots(figsize=figsize)
+    ims = []
+    for i in x:
+        artist = []
+        img = frames(i)
+        im = ax.imshow(img, animated=True, vmin=vmin, vmax=vmax, cmap=cmap, interpolation="nearest", origin=origin)
+        artist.append(im)
+        ax.set_aspect(aspect)
+        txt = ax.text(0.5, 1.05, f'Slice: {i}', horizontalalignment='center', fontsize='large', transform=ax.transAxes)
+        artist.append(txt)
+        if target is not None:
+            tf= target_frames(i)
+            target_image = np.zeros((img.shape[0], img.shape[1], 4))
+            target_image[:,:, 3] = tf*0.5
+            target_image[:,:, 0] = 0.1
+            target_image[:,:, 1] = 0.8
+            target_image[:,:, 2] = 0.1
+            im2 = ax.imshow(target_image, animated=True, interpolation="nearest", origin=origin)
+            artist.append(im2)
+        if mask is not None:
+            mf = mask_frames(i)
+            mask_image = np.zeros((img.shape[0], img.shape[1], 4))
+            mask_image[:,:, 3] = mf*0.5
+            mask_image[:,:, 0] = 0.8
+            mask_image[:,:, 1] = 0.1
+            mask_image[:,:, 2] = 0.1
+            im3 = ax.imshow(mask_image, animated=True, interpolation="nearest", origin=origin)
+            artist.append(im3)
+        ims.append(artist)
+    ani = animation.ArtistAnimation(fig, ims, interval=100, blit=True, repeat_delay=1000)
+    plt.show()
+    return ani

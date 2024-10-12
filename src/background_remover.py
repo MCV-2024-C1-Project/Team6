@@ -1,8 +1,171 @@
-import imageio
+import imageio.v2 as imageio
 import matplotlib.pyplot as plt
 import os
 import numpy as np
 import cv2
+from sklearn.decomposition import PCA
+import scipy.ndimage as nd
+from scipy.optimize import minimize
+from scipy.optimize import LinearConstraint
+import math
+from plotting import show_image3d
+
+
+def quadrilater_fitting(foreground):
+    def edge_distance(e0, e1, p):
+        v = e1 - e0
+        w = p - e0
+        t = np.dot(w, v) / np.dot(v, v)
+        t = max(0, min(1, t))
+        closest_point = e0 + t * v
+        distance = np.linalg.norm(p - closest_point)
+        return distance
+
+    def objective_function(quad_vertices, boundary_points):
+        quad_vertices = quad_vertices.reshape(4, 2)
+        distances = []
+        for pt in boundary_points:
+            dist0 = edge_distance(quad_vertices[0], quad_vertices[1], pt)
+            dist1 = edge_distance(quad_vertices[1], quad_vertices[2], pt)
+            dist2 = edge_distance(quad_vertices[2], quad_vertices[3], pt)
+            dist3 = edge_distance(quad_vertices[3], quad_vertices[0], pt)
+            distances.append(min(min(dist0, dist1), min(dist2, dist3)))
+        return np.sum(distances)
+    
+    contour = foreground & ~nd.binary_erosion(foreground)
+    points = np.argwhere(contour)
+    points2 = points[np.linspace(0, points.shape[0]-1, 100, dtype=int)]
+    (minx, miny), (maxx, maxy) = get_img_bbox(contour)
+    
+    initial_guess = np.array([[miny, minx], [maxy, minx], [maxy, maxx], [miny, maxx]])
+    bounds = [
+        (miny, None),
+        (minx, None),
+        (None, maxy),
+        (minx, None),
+        (None, maxy),
+        (None, maxx),
+        (miny, None),
+        (None, maxx),
+    ]
+
+    result = minimize(lambda r: objective_function(r, points2), initial_guess.reshape(-1), options={'maxiter': 100}, bounds=bounds)
+    quad_vertices = result.x.reshape(4, 2)
+    quad_vertices_int = quad_vertices.astype(np.int32)
+    blank_image = np.zeros_like(foreground, dtype=np.uint8)
+    cv2.fillPoly(blank_image, [quad_vertices_int[:, [1,0]]], 1)
+    return blank_image
+
+def background_color_sampling1(image, radius):
+    h, w, ch = image.shape
+    north_colors = image[0:radius, :, :]
+    south_colors = image[h-radius:h, :, :]
+    west_colors = image[radius:h-radius, 0:radius, :]
+    east_colors = image[radius:h-radius, w-radius:w, :]
+    border_colors = np.concatenate([north_colors.reshape(-1, 3), 
+                                    south_colors.reshape(-1, 3),
+                                    west_colors.reshape(-1, 3),
+                                    east_colors.reshape(-1, 3)])
+    return np.mean(border_colors, axis=0), np.std(border_colors, axis=0)
+
+def background_color_sampling2(image, radius, sampling_sides=None):
+    h, w, ch = image.shape
+    colors = []
+    if sampling_sides is None:
+        sampling_sides = ['north', 'south', 'west', 'east']
+    if 'north' in sampling_sides:
+        colors.append(image[0:radius, :, :].reshape(-1, 3))
+    if 'south' in sampling_sides:
+        colors.append(image[h-radius:h, :, :].reshape(-1, 3))
+    if 'west' in sampling_sides:
+        colors.append(image[radius:h-radius, 0:radius, :].reshape(-1, 3))
+    if 'east' in sampling_sides:
+        colors.append(image[radius:h-radius, w-radius:w, :].reshape(-1, 3))
+    border_colors = np.concatenate(colors)
+    pca = PCA(n_components=3)
+    pca.fit(border_colors)
+    return pca
+
+def foreground_treshold1(input_image, threshold=2.5):
+    h, w, ch = input_image.shape
+    image = np.copy(input_image).astype(np.float32)
+    mean, std = background_color_sampling1(image, 10)
+    z_scores = np.abs(image.reshape(-1, 3) - mean) / std
+    z_image = np.linalg.norm(z_scores, axis=1)
+    z_image = z_image.reshape(h, w)
+    foreground = z_image >= threshold
+    return foreground
+
+def foreground_treshold2(input_image, threshold=3.25):
+    h, w, ch = input_image.shape
+    image = cv2.cvtColor(input_image, cv2.COLOR_RGB2HSV).astype(np.float32)
+    weights = np.array([0.5, 0.5, 2])
+    mean, std = background_color_sampling1(image, 10)
+    z_scores = np.abs(image.reshape(-1, 3) - mean) * weights / std
+    z_image = np.linalg.norm(z_scores, axis=1)
+    z_image = z_image.reshape(h, w)
+    foreground = z_image >= threshold
+    return foreground
+
+def foreground_treshold3(input_image, threshold=4, sampling_sides=None):
+    h, w, ch = input_image.shape
+    border_pca = background_color_sampling2(input_image, 10, sampling_sides)
+    explained_variance = np.sqrt(border_pca.explained_variance_)
+    projected_data = border_pca.transform(input_image.reshape(-1, 3))
+    z_scores = np.abs(projected_data) / explained_variance
+    z_image = np.linalg.norm(z_scores, axis=1)
+    z_image = z_image.reshape(h, w)
+    foreground = z_image >= threshold
+    return foreground
+
+def foreground_treshold4(input_image, threshold=4):
+    h, w = input_image.shape[:2]
+    foreground = np.zeros((h, w), dtype=np.uint8)
+    q1 = (slice(0, h//2), slice(0, w//2))
+    q2 = (slice(0, h//2), slice(w//2, w))
+    q3 = (slice(h//2, h), slice(0, w//2))
+    q4 = (slice(h//2, h), slice(w//2, w))
+    foreground[q1] = foreground_treshold3(input_image[*q1, :], threshold, sampling_sides=['north', 'west'])
+    foreground[q2] = foreground_treshold3(input_image[*q2, :], threshold, sampling_sides=['north', 'east'])
+    foreground[q3] = foreground_treshold3(input_image[*q3, :], threshold, sampling_sides=['south', 'west'])
+    foreground[q4] = foreground_treshold3(input_image[*q4, :], threshold, sampling_sides=['south', 'east'])
+    return foreground
+
+def remove_mask_border(mask, radius):
+    h, w = mask.shape
+    mask = np.copy(mask)
+    mask[0:radius, :] = 0
+    mask[h-radius:h, :] = 0
+    mask[radius:h-radius, 0:radius] = 0
+    mask[radius:h-radius, w-radius:w] = 0
+    return mask
+
+def remove_holes(input, structure_size):
+    mask = input>0
+    mask_d = nd.binary_dilation(mask, iterations=structure_size)
+    mask_d = nd.binary_fill_holes(mask_d)
+    return nd.binary_erosion(mask_d, iterations=structure_size)
+
+def get_largest_component(input, structure_size):
+    mask = input>0
+    mask_e = nd.binary_erosion(mask, iterations=structure_size)
+    labeled_image, num_features = nd.label(mask_e)
+    component_sizes = np.bincount(labeled_image.ravel())
+    largest_component = component_sizes[1:].argmax() + 1
+    largest_component_mask = labeled_image == largest_component
+    result = nd.binary_dilation(largest_component_mask, iterations=structure_size)
+    return result
+
+def foreground_filter(foreground):
+    foreground = remove_mask_border(foreground, 10)
+    foreground = remove_holes(foreground, 5)
+    foreground = get_largest_component(foreground, 5)
+    return foreground
+
+
+def frame_detector(image):
+    foreground = foreground_filter(foreground_treshold3(image))
+    return foreground
 
 
 #background removal function
@@ -69,7 +232,7 @@ def get_img_bbox(img):
     bounding_box_min = tuple(min_indices[::-1])
     bounding_box_max = tuple(max_indices[::-1])
 
-    return bounding_box_min,bounding_box_max
+    return bounding_box_min, bounding_box_max
 
 
 #function that calculates precision, recall and f1 for a pair of gt and pred mask
@@ -109,7 +272,10 @@ def test_background_removal(input_folder,output_folder,plot = False, depth = 8, 
 
             image = imageio.imread(image_path)
             gt_mask = imageio.imread(image_path[:-4] + ".png")
-            pred_mask = remove_background(image, depth, K, sample_frequency,kernel)
+            
+            # pred_mask = remove_background(image, depth, K, sample_frequency,kernel)
+            # pred_mask = foreground_treshold1(image, 2.8)
+            pred_mask = frame_detector(image)
             metric = evaluate(gt_mask,pred_mask)
             metrics.append(metric)
             if(plot):
@@ -120,7 +286,11 @@ def test_background_removal(input_folder,output_folder,plot = False, depth = 8, 
 
                 plt.subplot(10,2, 2 * i + 2)
                 plt.axis('off')
-                plt.imshow(pred_mask, cmap='gray')
+                img_mask = np.zeros(shape=(*pred_mask.shape, 4))
+                img_mask[:,:,3] = pred_mask*0.5
+                img_mask[:,:,0] = 1
+                plt.imshow(image)
+                plt.imshow(img_mask)
                 
 
 
