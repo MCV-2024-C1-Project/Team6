@@ -32,7 +32,8 @@ def predict_command(args):
                               int(num_bins),
                               args.measure,
                               single_image=single_image, 
-                              evaluate=args.evaluate) # mapk, apk, (path, dist, raw_dist, db_image_descriptor)
+                              evaluate=args.evaluate,
+                              remove_background=args.remove_background) # mapk, apk, (path, dist, raw_dist, db_image_descriptor)
     feature_ids = getHistogramComponents(descriptor_subtype)
     output_result = []
     plotting_results = []
@@ -85,6 +86,7 @@ if __name__ == '__main__':
     predict_parser.add_argument('--evaluate', action='store_true', help='If set, perform evaluation using ground truth')
     predict_parser.add_argument('--save-output', action='store_true', help='If set, save the prediction results to a CSV file')
     predict_parser.add_argument('--output', required=False, default="results/", help='Directory to save output files if --save-output is set')
+    predict_parser.add_argument('--remove-background', action='store_true', help='If set, perform foreground cropping')
     predict_parser.set_defaults(func=predict_command)
 
     # Parse the arguments and call the appropriate function

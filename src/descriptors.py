@@ -8,19 +8,14 @@ import pickle
 
 from src.histogram import HistogramExtractorFactory
 
-def compute_descriptor(path, type, subtype, num_bins=256):
+def compute_descriptor(image, type, subtype, num_bins=256):
     if type != "Histogram" :
         sys.exit("Not yet implemented")
     
     #setup the type of histogram you want
     color_mode = subtype #GRAY or RGB from this moment
-    
-    #list of picture name and its histogram
-    descriptor_list = []
-    
     hist_extractor = HistogramExtractorFactory(type = color_mode, histogram_bins = num_bins)
-    
-    return hist_extractor.extract(iio.imread(path))
+    return hist_extractor.extract(image)
 
 
 #maybe change the name to save descriptors?
@@ -29,7 +24,8 @@ def generate_descriptors_DBfile(input_folder, output_folder, descriptor_type, de
     image_paths = get_all_jpg_images(input_folder)
     descriptor_list = []
     for path in image_paths:
-        descriptor = compute_descriptor(path, descriptor_type, descriptor_subtype, num_bins)
+        raw_image = iio.imread(path)
+        descriptor = compute_descriptor(raw_image, descriptor_type, descriptor_subtype, num_bins)
         descriptor_list.append( (path, descriptor) ) #changed from array to tuple, more easily iteratable
 
     if not os.path.exists(output_folder):

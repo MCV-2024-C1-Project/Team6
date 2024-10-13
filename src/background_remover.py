@@ -8,8 +8,33 @@ import scipy.ndimage as nd
 from scipy.optimize import minimize
 from scipy.optimize import LinearConstraint
 import math
-from plotting import show_image3d
 
+def plot_demo(image, mask, title):
+    fig, ax = plt.subplots(1, 2)
+    ax[0].imshow(image)
+    ax[0].set_title("Image")
+    ax[0].axis('off')
+    mask_image = np.zeros(shape=(*mask.shape, 4))
+    mask_image[:,:,0] = 1
+    mask_image[:,:,1] = 0
+    mask_image[:,:,2] = 0
+    mask_image[:,:,3] = mask*0.5
+    ax[1].imshow(image)
+    ax[1].imshow(mask_image)
+    ax[1].set_title(title)
+    ax[1].axis('off')
+    plt.show()
+
+def plot_demo2(image1, image2, title1, title2):
+    fig, ax = plt.subplots(1, 2)
+    ax[0].imshow(image1)
+    ax[0].set_title(title1)
+    ax[0].set_title(title1)
+    ax[0].axis('off')
+    ax[1].imshow(image2)
+    ax[1].set_title(title2)
+    ax[1].axis('off')
+    plt.show()
 
 def quadrilater_fitting(foreground):
     def edge_distance(e0, e1, p):
@@ -160,12 +185,36 @@ def foreground_filter(foreground):
     foreground = remove_mask_border(foreground, 10)
     foreground = remove_holes(foreground, 5)
     foreground = get_largest_component(foreground, 5)
+    foreground = nd.binary_opening(foreground, iterations=10)
     return foreground
 
 
 def frame_detector(image):
-    foreground = foreground_filter(foreground_treshold3(image))
+    foreground = foreground_treshold3(image, 3)
+    foreground = foreground_filter(foreground)
+    # plot_demo2(foreground, foreground2, 'Mask Input', 'Mask Result')
+    # plot_demo(image, foreground, 'Final Result')
     return foreground
+
+def get_bbox(img):
+    non_zero_indices = np.argwhere(img)
+    if len(non_zero_indices) == 0:
+        return tuple((0, size, size) for size in img.shape)
+
+    min_indices = np.min(non_zero_indices,axis=0)
+    max_indices = np.max(non_zero_indices,axis=0)
+
+    return slice(min_indices[0], max_indices[0]), slice(min_indices[1], max_indices[1])
+
+def crop_foreground(image, plot_debug=False):
+    foreground = frame_detector(image)
+    opening_size = 5
+    foreground_e = nd.binary_erosion(foreground, iterations=opening_size)
+    if plot_debug:
+       pass
+    bbox = get_bbox(foreground_e)
+    cropped_image = np.copy(image[bbox])
+    return cropped_image
 
 
 #background removal function
@@ -220,20 +269,6 @@ def remove_background(image,depth, K, sample_frequency,kernel):
     return pred_mask
 
 
-#bounding box retrieval function for a binary mask
-def get_img_bbox(img):
-    non_zero_indices = np.argwhere(img)
-    if len(non_zero_indices) == 0:
-        return tuple((0, size, size) for size in img.shape)
-
-    min_indices = np.min(non_zero_indices,axis=0)
-    max_indices = np.max(non_zero_indices,axis=0)
-
-    bounding_box_min = tuple(min_indices[::-1])
-    bounding_box_max = tuple(max_indices[::-1])
-
-    return bounding_box_min, bounding_box_max
-
 
 #function that calculates precision, recall and f1 for a pair of gt and pred mask
 def evaluate(gt_mask,pred_mask,verbose = False):
@@ -257,7 +292,7 @@ def evaluate(gt_mask,pred_mask,verbose = False):
 
 #function for quantitative testing of background removal
 #dataset requires original images and masks in format name.jpg and name.png, respectively
-def test_background_removal(input_folder,output_folder,plot = False, depth = 8, K = 2.5, sample_frequency = 50,kernel = np.ones((5, 5), np.uint8)):
+def test_background_removal(input_folder,output_folder,plot = False, save=False, depth = 8, K = 2.5, sample_frequency = 50,kernel = np.ones((5, 5), np.uint8)):
     images_list = [os.path.join(input_folder, file) for file in os.listdir(input_folder) if file.endswith(".jpg")]
     batch_size = 10
     num_batches = int(np.ceil(len(images_list) / batch_size))
@@ -271,18 +306,18 @@ def test_background_removal(input_folder,output_folder,plot = False, depth = 8, 
         for i, image_path in enumerate(batch_images):
 
             image = imageio.imread(image_path)
-            gt_mask = imageio.imread(image_path[:-4] + ".png")
+            gt_mask = imageio.imread(image_path[:-4] + ".jpg")
             
             # pred_mask = remove_background(image, depth, K, sample_frequency,kernel)
             # pred_mask = foreground_treshold1(image, 2.8)
             pred_mask = frame_detector(image)
-            metric = evaluate(gt_mask,pred_mask)
-            metrics.append(metric)
+            # metric = evaluate(gt_mask,pred_mask)
+            # metrics.append(metric)
             if(plot):
                 plt.subplot(10, 2, 2 * i + 1)
                 plt.imshow(image)
                 plt.axis('off')
-                plt.title(f'prec: {metric[0]}, recall: {metric[1]}, f1: {metric[2]}')
+                # plt.title(f'prec: {metric[0]}, recall: {metric[1]}, f1: {metric[2]}')
 
                 plt.subplot(10,2, 2 * i + 2)
                 plt.axis('off')
@@ -291,6 +326,12 @@ def test_background_removal(input_folder,output_folder,plot = False, depth = 8, 
                 img_mask[:,:,0] = 1
                 plt.imshow(image)
                 plt.imshow(img_mask)
+            if(save):
+                print(image_path)
+                im_name = image_path.split('\\')[-1][:-4]+'.png'
+                print(im_name)
+                plt.imsave(os.path.join(output_folder, im_name), pred_mask, cmap='gray')
+                pass
                 
 
 
@@ -301,12 +342,13 @@ def test_background_removal(input_folder,output_folder,plot = False, depth = 8, 
             plt.close()
             print(f"Saved plot {batch_index + 1}")
 
-    metrics = np.array(metrics)
+    # metrics = np.array(metrics)
 
-    prec,recall,f1 = np.round(np.mean(metrics[:,0]),3),np.round(np.mean(metrics[:,1]),3),np.round(np.mean(metrics[:,2]),3)
-    print(f'prec: {prec}, recall: {recall}, f1: {f1}')
+    # prec,recall,f1 = np.round(np.mean(metrics[:,0]),3),np.round(np.mean(metrics[:,1]),3),np.round(np.mean(metrics[:,2]),3)
+    # print(f'prec: {prec}, recall: {recall}, f1: {f1}')
 
 if __name__ == '__main__':
-    dataset_folder = "data/week2/qsd2_w2"
+    dataset_folder = "data/week2/qst2_w2"
     output_folder = "data/week2/plots"
-    test_background_removal(dataset_folder,output_folder,plot=True)
+    results_folder = "data/week2/results"
+    test_background_removal(dataset_folder, results_folder, plot=False, save=True)
