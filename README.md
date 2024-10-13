@@ -139,8 +139,8 @@ python main.py init --db_path <path_to_database> --descriptor-type <descriptor_t
   - HSV: Hue, Saturation, Value
   - YCbCr: Luma, Cb, Cr
   - Super: Luma, Cb, Cr, Hue, Saturation, Value
-  - Pyramid: Pyramid based histogram extraction using any of the previous ones.
-  - Block: Block based histogram extraction using any of the previous ones.
+  - Pyramid*{num}*{type}: Pyramid based histogram extraction using any of the previous ones. num for level size and type for individual histogram type
+  - Block*{sum}*{type}: Block based histogram extraction using any of the previous ones. num for number of blocks and type for individual histogram type
 
 - Example Descriptor Types:
 
