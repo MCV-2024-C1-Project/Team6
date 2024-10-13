@@ -308,16 +308,16 @@ def test_background_removal(input_folder,output_folder,plot = False, save=False,
             image = imageio.imread(image_path)
             gt_mask = imageio.imread(image_path[:-4] + ".jpg")
             
-            # pred_mask = remove_background(image, depth, K, sample_frequency,kernel)
-            # pred_mask = foreground_treshold1(image, 2.8)
+            pred_mask = remove_background(image, depth, K, sample_frequency,kernel)
+            pred_mask = foreground_treshold1(image, 2.8)
             pred_mask = frame_detector(image)
-            # metric = evaluate(gt_mask,pred_mask)
-            # metrics.append(metric)
+            metric = evaluate(gt_mask,pred_mask)
+            metrics.append(metric)
             if(plot):
                 plt.subplot(10, 2, 2 * i + 1)
                 plt.imshow(image)
                 plt.axis('off')
-                # plt.title(f'prec: {metric[0]}, recall: {metric[1]}, f1: {metric[2]}')
+                plt.title(f'prec: {metric[0]}, recall: {metric[1]}, f1: {metric[2]}')
 
                 plt.subplot(10,2, 2 * i + 2)
                 plt.axis('off')
@@ -342,10 +342,10 @@ def test_background_removal(input_folder,output_folder,plot = False, save=False,
             plt.close()
             print(f"Saved plot {batch_index + 1}")
 
-    # metrics = np.array(metrics)
+    metrics = np.array(metrics)
 
-    # prec,recall,f1 = np.round(np.mean(metrics[:,0]),3),np.round(np.mean(metrics[:,1]),3),np.round(np.mean(metrics[:,2]),3)
-    # print(f'prec: {prec}, recall: {recall}, f1: {f1}')
+    prec,recall,f1 = np.round(np.mean(metrics[:,0]),3),np.round(np.mean(metrics[:,1]),3),np.round(np.mean(metrics[:,2]),3)
+    print(f'prec: {prec}, recall: {recall}, f1: {f1}')
 
 if __name__ == '__main__':
     dataset_folder = "data/week2/qst2_w2"
