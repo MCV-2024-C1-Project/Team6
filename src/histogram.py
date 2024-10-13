@@ -12,10 +12,13 @@ HistogramComponents = {
     'RGB3D': ['RGB3d'],
     'GRAY': ['Gray'],
     'HSV': ['Hue', 'Saturation', 'Value'],
+    'HSV2D': ['HueSaturation', 'Value'],
     'YCbCr': ['Luma', 'Cb', 'Cr'],
     'YCbCr2D': ['Luma', 'CbCr'],
     'Super': ['Luma', 'Cb', 'Cr']+['Hue', 'Saturation', 'Value'],
-    
+    'Super2D': ['Luma', 'CbCr']+['HueSaturation', 'Value'],
+    'Super2D2': ['Luma', 'CbCr']+['Hue', 'Saturation', 'Value'],
+    'Super2D3D': ['Luma', 'CbCr']+['RGB3d'],
 }
 # 'Block of N for super': ['Luma0', 'Cb0', 'Cr0','Hue0', 'Saturation0', 'Value0', ... 'LumaN', 'CbN', 'CrN','HueN', 'SaturationN', 'ValueN']
 # 'Piramid of N for super': ['Luma0', 'Cb0', 'Cr0','Hue0', 'Saturation0', 'Value0', ... 'LumaN', 'CbN', 'CrN','HueN', 'SaturationN', 'ValueN']
@@ -48,8 +51,16 @@ def HistogramExtractorFactory(type:str, histogram_bins:int = 256):
         return YCbCrHistogramExtractor(histogram_bins)
     elif type == 'Super':
         return SuperHistogram(histogram_bins)
+    elif type == 'Super2D':
+        return Super2DHistogram(histogram_bins)
+    elif type == 'Super2D2':
+        return Super2D2Histogram(histogram_bins)
+    elif type == 'Super2D3D':
+        return Super2D3DHistogram(histogram_bins)  
     elif type == 'YCbCr2D':
         return YCbCr2DHistogramExtractor(histogram_bins)
+    elif type == "HSV2D":
+        return HSV2DHistogramExtractor(histogram_bins)
     elif type == 'RGB3D':
         return RGB3DHistogramExtractor(histogram_bins)
     elif type[:5] == 'Block':
@@ -161,7 +172,46 @@ class HSVHistogramExtractor(HistogramExtractor):
 
 
         return histograms
-    
+
+class HSV2DHistogramExtractor(HistogramExtractor):
+    def __init__(self, histogram_bins:int = 256):
+        super(HSV2DHistogramExtractor, self).__init__(histogram_bins)
+
+    def extract(self, image_input, normalize = True):
+        # Caution: image from imageio is RGB, from cv2 is BGR
+        image = cv2.cvtColor(image_input, cv2.COLOR_RGB2HSV)
+        histograms = [] 
+        # RGB mode
+        #Vhistogram
+        bin_edges = np.linspace(0, 255, num=self.histogram_bins + 1)
+        v_channel = image[:, :, -1]
+        v_channel = ((v_channel - v_channel.mean()) / (v_channel.std()+1e-10))
+        
+        v_bin_edges = np.linspace(-10, 10, num=self.histogram_bins + 1)
+        v_histogram, bin_edges = np.histogram(
+                v_channel.flatten(),
+                bins=v_bin_edges
+                )
+        v_histogram = v_histogram / v_histogram.sum() if normalize else v_histogram
+        
+        H_channel_img = image[:,:,0].flatten()
+        S_channel_img = image[:,:,1].flatten()
+        
+        HS_histogram,_ = np.histogramdd([H_channel_img, S_channel_img], bins=[bin_edges]*2)
+        HS_histogram = HS_histogram / HS_histogram.sum() if normalize else HS_histogram
+        HS_histogram = np.nan_to_num(HS_histogram, nan=0.0)
+        HS_histogram[np.isnan(HS_histogram)] = 0.0
+        HS_histogram[np.isinf(HS_histogram)] = 0.0
+
+        histograms.append(HS_histogram)
+
+        
+        histograms.append(v_histogram)
+
+
+        return histograms
+
+
 class YCbCrHistogramExtractor(HistogramExtractor):
     def __init__(self, histogram_bins:int = 256):
         super(YCbCrHistogramExtractor, self).__init__(histogram_bins)
@@ -229,6 +279,30 @@ class SuperHistogram(HistogramExtractor):
         super(SuperHistogram, self).__init__(histogram_bins)
         self.e1 = YCbCrHistogramExtractor(histogram_bins)
         self.e2 = HSVHistogramExtractor(histogram_bins)
+    def extract(self, image, normalize = True):
+        return self.e1.extract(image, normalize) + self.e2.extract(image, normalize)
+
+class Super2DHistogram(HistogramExtractor):
+    def __init__(self, histogram_bins:int = 256):
+        super(Super2DHistogram, self).__init__(histogram_bins)
+        self.e1 = YCbCr2DHistogramExtractor(histogram_bins)
+        self.e2 = HSV2DHistogramExtractor(histogram_bins)
+    def extract(self, image, normalize = True):
+        return self.e1.extract(image, normalize) + self.e2.extract(image, normalize)
+
+class Super2D2Histogram(HistogramExtractor):
+    def __init__(self, histogram_bins:int = 256):
+        super(Super2D2Histogram, self).__init__(histogram_bins)
+        self.e1 = YCbCr2DHistogramExtractor(histogram_bins)
+        self.e2 = HSVHistogramExtractor(histogram_bins)
+    def extract(self, image, normalize = True):
+        return self.e1.extract(image, normalize) + self.e2.extract(image, normalize)
+
+class Super2D3DHistogram(HistogramExtractor):
+    def __init__(self, histogram_bins:int = 256):
+        super(Super2D3DHistogram, self).__init__(histogram_bins)
+        self.e1 = YCbCr2DHistogramExtractor(histogram_bins)
+        self.e2 = RGB3DHistogramExtractor(histogram_bins)
     def extract(self, image, normalize = True):
         return self.e1.extract(image, normalize) + self.e2.extract(image, normalize)
 
