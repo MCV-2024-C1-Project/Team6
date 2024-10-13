@@ -192,10 +192,6 @@ python main.py predict --input data/week2/qsd1_w2 --result-number 5 --descriptor
 python main.py predict --input data/week2/qsd1_w2 --result-number 5 --descriptor-type Histogram-Pyramid_4_Super-64 --measure L1-Median --evaluate --remove-background
 ```
 
-```
-python main.py predict --input data/week2/qsd1_w2 --result-number 5 --descriptor-type Histogram-Pyramid_4_Super-64 --measure L1-Median --evaluate --remove-background
-```
-
 #### 3. Foreground segmentation
 
 ```
