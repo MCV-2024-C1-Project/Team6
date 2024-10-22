@@ -29,17 +29,20 @@ def prediction(input_path, db_path, k, descriptor_type, descriptor_subtype, num_
     for path in image_paths:
         raw_image = imageio.imread(path)
         if remove_background:
-            image = crop_foreground(raw_image, False)
+            list_image = crop_foreground(raw_image, False) # now crop image may generate more than one , ideally starting a top left and ending a bottom right
             # _, ax = plt.subplots(1,2)
             # ax[0].imshow(raw_image)
             # ax[1].imshow(image)
             # plt.show()
         else:
-            image = raw_image
-        descriptor = compute_descriptor(image, descriptor_type, descriptor_subtype, num_bins=num_bins)
-        k_result = retrieve_K(descriptor, db_descriptor, measure, k) # listKresults = [(path_result_image, metric, descriptor_result_image, raw_metric) ... ]
-        result.append( ((path, descriptor), k_result) ) # [((path_query_image, descriptor_query_image),list_Kresults) ... ]
-    
+            list_image = [raw_image]
+        
+        result_tmp = []
+        for image in list_image:
+            descriptor = compute_descriptor(image, descriptor_type, descriptor_subtype, num_bins=num_bins)
+            k_result = retrieve_K(descriptor, db_descriptor, measure, k) # listKresults = [(path_result_image, metric, descriptor_result_image, raw_metric) ... ]
+            result_tmp.append( ((path, descriptor), k_result) ) # [((path_query_image, descriptor_query_image),list_Kresults) ... ] 
+        result.append(result_tmp) # now result is an array where each element is a vector of N elements (N paitings 1 image). So these an element of result vector[1 paiting result  image 1,..., N paiting result  image 1]
     if evaluate:
         mapk, list_apk = compute_performance(result, os.path.join(input_path, "gt_corresps.pkl"))
         return (mapk, list_apk, result)

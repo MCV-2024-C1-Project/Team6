@@ -39,25 +39,32 @@ def predict_command(args):
     plotting_results = []
     if args.evaluate:
         score, apk_list, result_list = result
-        for i, (query_input, score_list) in enumerate(result_list):
-            result_names = [s[0] for s in score_list]
-            output_result.append([image_name_to_id(name) for name in result_names])
-            print(f"{query_input[0]} ==> {result_names} | Performance(AP@K): {apk_list[i]}")
-            plotting_results.append((query_input, score_list, apk_list[i]))
+        print(f"APK list:{str(apk_list)}")
+        for j, image_result in enumerate(result_list):
+            paitings_output_result = []
+            for i, (query_input, score_list) in enumerate(image_result):
+                result_names = [s[0] for s in score_list]
+                paitings_output_result.append([image_name_to_id(name) for name in result_names])
+                print(f"{query_input[0]} ==> {result_names} | Performance(AP@K): {str(apk_list[j+i])}")
+                plotting_results.append((query_input, score_list, apk_list[j+i]))
+            output_result.append(paitings_output_result)
         print(f"Performance score (MAP@K): {score}")
     else:
         result_list = result
-        for query_input, score_list in result_list:
-            result_names = [s[0] for s in score_list]
-            output_result.append([image_name_to_id(name) for name in result_names])
-            print(f"{query_input[0]} ==> {result_names}")
-            plotting_results.append((query_input, score_list, None))
-            
+        for j, image_result in enumerate(result_list):
+            paitings_output_result = []
+            for i, (query_input, score_list) in enumerate(image_result):
+                result_names = [s[0] for s in score_list]
+                paitings_output_result.append([image_name_to_id(name) for name in result_names])
+                print(f"{query_input[0]} ==> {result_names}")
+                plotting_results.append((query_input, score_list, None))
+            output_result.append(paitings_output_result)
+                    
     if args.save_output:
         output_path = args.output
         if not os.path.exists(output_path):
             os.mkdir(output_path)
-        print(output_result)
+        print(f"Output pkl file: {output_result}")
         with open(os.path.join(output_path, "result.pkl"), "wb") as f:
             pickle.dump(output_result, f)
     if args.plot:

@@ -8,15 +8,16 @@ import pickle
 
 from src.histogram import HistogramExtractorFactory
 
-def compute_descriptor(image, type, subtype, num_bins=256):
-    if type != "Histogram" :
+def compute_descriptor(image, type, subtype, num_bins=256):  
+    if type == "Histogram":
+        #setup the type of histogram you want
+        color_mode = subtype #GRAY or RGB from this moment
+        hist_extractor = HistogramExtractorFactory(type = color_mode, histogram_bins = num_bins)
+        return hist_extractor.extract(image)
+    elif type == "Texture":
+        pass
+    else:
         sys.exit("Not yet implemented")
-    
-    #setup the type of histogram you want
-    color_mode = subtype #GRAY or RGB from this moment
-    hist_extractor = HistogramExtractorFactory(type = color_mode, histogram_bins = num_bins)
-    return hist_extractor.extract(image)
-
 
 #maybe change the name to save descriptors?
 def generate_descriptors_DBfile(input_folder, output_folder, descriptor_type, descriptor_subtype, num_bins=256):

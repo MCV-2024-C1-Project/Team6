@@ -214,7 +214,7 @@ def crop_foreground(image, plot_debug=False):
        pass
     bbox = get_bbox(foreground_e)
     cropped_image = np.copy(image[bbox])
-    return cropped_image
+    return [cropped_image] # TODO we need to detect if there's more than one paiting and return a list of 1 or 2 images, maybe had a flag to say if the crop may have to check for 2 paitings in an image
 
 
 #background removal function
