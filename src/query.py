@@ -8,6 +8,7 @@ from src.descriptors import load_descriptors
 from src.measures import MeasureFactory
 from src.performance import compute_performance
 from src.background_remover import crop_foreground
+from src.denoising import noise_removal
 import matplotlib.pyplot as plt
 
 def retrieve_K(descriptor, db_descriptor, measure, k):
@@ -20,7 +21,7 @@ def retrieve_K(descriptor, db_descriptor, measure, k):
     result = sorted(result, key=lambda x: x[1]) # we sort the list by using a function that extract the score
     return result[:k] # return the first k element of the list
 
-def prediction(input_path, db_path, k, descriptor_type, descriptor_subtype, num_bins, measure, evaluate=False, single_image=False, remove_background=False):
+def prediction(input_path, db_path, k, descriptor_type, descriptor_subtype, num_bins, measure, evaluate=False, single_image=False, remove_background=False, remove_noise=False, noise_filter_arguments=None):
     db_descriptor = load_descriptors(db_path, descriptor_type, descriptor_subtype, num_bins=num_bins) # format: [(path1, descriptor1),(path2, descriptor2),...,(pathN, descriptorN)]
     image_paths = [input_path] if single_image else get_all_jpg_images(input_path)
 
@@ -37,6 +38,9 @@ def prediction(input_path, db_path, k, descriptor_type, descriptor_subtype, num_
         else:
             list_image = [raw_image]
         
+        if remove_noise:
+            list_image = [noise_removal(image, noise_filter_arguments) for image in list_image] 
+
         result_tmp = []
         for image in list_image:
             descriptor = compute_descriptor(image, descriptor_type, descriptor_subtype, num_bins=num_bins)

@@ -33,7 +33,9 @@ def predict_command(args):
                               args.measure,
                               single_image=single_image, 
                               evaluate=args.evaluate,
-                              remove_background=args.remove_background) # mapk, apk, (path, dist, raw_dist, db_image_descriptor)
+                              remove_background=args.remove_background,
+                              remove_noise=args.remove_noise,
+                              noise_filter_arguments=args.filter_type) # mapk, apk, (path, dist, raw_dist, db_image_descriptor)
     feature_ids = getHistogramComponents(descriptor_subtype)
     output_result = []
     plotting_results = []
@@ -94,6 +96,8 @@ if __name__ == '__main__':
     predict_parser.add_argument('--save-output', action='store_true', help='If set, save the prediction results to a CSV file')
     predict_parser.add_argument('--output', required=False, default="results/", help='Directory to save output files if --save-output is set')
     predict_parser.add_argument('--remove-background', action='store_true', help='If set, perform foreground cropping')
+    predict_parser.add_argument('--remove-noise', action='store_true', help='If set, perform noise removal')
+    predict_parser.add_argument('--filter-type', required=False, default="Gaussian-3_1.0", help='Filter type to be used, in the format "filtertype-<kernel_size>, the format of kernel size in gaussian also contains the float value for sigma"')
     predict_parser.set_defaults(func=predict_command)
 
     # Parse the arguments and call the appropriate function
