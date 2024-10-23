@@ -15,7 +15,7 @@ def compute_descriptor(image, type, subtype, num_bins=256):
         hist_extractor = HistogramExtractorFactory(type = color_mode, histogram_bins = num_bins)
         return hist_extractor.extract(image)
     elif type == "Texture":
-        pass
+        hist_extractor = TextureExtractorFactory(type = color_mode, histogram_bins = num_bins)
     else:
         sys.exit("Not yet implemented")
 
@@ -55,3 +55,6 @@ def get_all_jpg_images(input_folder):
             image_paths.append(path)
 
     return sorted(image_paths)
+
+def get_list_descriptor(list_descriptor):
+    pass
