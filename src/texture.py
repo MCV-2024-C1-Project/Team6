@@ -17,8 +17,14 @@ def TextureExtractorFactory(type:str, histogram_bins:int = 256):
         return BlockLBPExtractor(histogram_bins)    
     if type == "LBP_no_block":
         return LBPExtractor(histogram_bins)
-    elif type == "DCT":
-        return DCTExtractor(histogram_bins)
+    elif "DCT" in type:
+        # fraction means block size = image size / block_fraction 
+        # coef_reduction_fraction: in the slide
+        _, block_fraction, coef_reduction_fraction, coef_normalize = type.split('_') 
+        extractor = DCTExtractor(block_fraction = int(block_fraction),
+                                 coef_reduction_fraction = float(coef_reduction_fraction),
+                                 coef_normalize = coef_normalize)
+        return extractor
     elif type == "Wavelet":
         return WaveletExtractor(histogram_bins)
     else:
@@ -60,11 +66,62 @@ class LBPExtractor(TextureExtractor):
         return histogram
 
 class DCTExtractor(TextureExtractor):
-    def __init__(self, histogram_bins:int = 256):
-        super(DCTExtractor, self).__init__(histogram_bins)
+    def __init__(self, block_fraction: int = 16, coef_reduction_fraction: float = 0.5, coef_normalize: int=0):
+        super(DCTExtractor, self).__init__(histogram_bins=None)
+        self.block_fraction = block_fraction
+        self.coef_reduction_fraction = coef_reduction_fraction
+        self.coef_normalize = bool(coef_normalize)
 
-    def extract(self, image, normalize=True):
-        return None
+    def extract(self, image):
+        if len(image.shape) == 3:
+            gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray_image = image
+        fixed_size = 512
+        gray_image = cv2.resize(gray_image, (fixed_size,fixed_size), interpolation=cv2.INTER_AREA)
+        height, width = gray_image.shape
+        
+        block_size = fixed_size // self.block_fraction
+        block_size = max(block_size, 8) #min: 8, not too small block
+        if block_size % 2 != 0:
+            block_size += 1
+
+        dct_blocks = []
+        for count_i,i in enumerate(range(0, height, block_size)):
+            for count_j,j in enumerate(range(0, width, block_size)):
+                
+                block = gray_image[i:i+block_size, j:j+block_size]
+                if block.shape[0] == block_size and block.shape[1] == block_size:
+                    # DCT 
+                    dct_block = cv2.dct(np.float32(block))
+                    # zigzag scan
+                    zigzag = self.zigzag_scan(dct_block, coef_reduction_fraction = self.coef_reduction_fraction)
+                    dct_blocks.extend(zigzag)
+
+        dct_coefficients = np.array(dct_blocks)
+        if self.coef_normalize:
+            dct_coefficients = (dct_coefficients - np.min(dct_coefficients)) / (np.max(dct_coefficients) - np.min(dct_coefficients))
+
+        return [dct_coefficients]
+
+    def zigzag_scan(self, block, coef_reduction_fraction):
+        h, w = block.shape
+        result = []
+
+        for sum in range(h + w - 1):
+            if sum % 2 == 0:
+                for i in range(sum + 1):
+                    j = sum - i
+                    if i < h and j < w:
+                        result.append(block[j, i])
+            else:
+                for i in range(sum + 1):
+                    j = sum - i
+                    if i < h and j < w:
+                        result.append(block[i, j])
+        total_coeffs = len(result)
+        num_to_keep = int(total_coeffs * coef_reduction_fraction)
+        return result[:num_to_keep]
 
     
 class BlockLBPExtractor(TextureExtractor):
@@ -142,11 +199,11 @@ class WaveletExtractor(TextureExtractor):
 
 if __name__ == "__main__":
 
-    image = iio.imread('target/BBDD/bbdd_00003.jpg')
+    image = iio.imread('../W3/BBDD/bbdd_00165.jpg')
 
 
     extractor = TextureExtractorFactory("LBP",64)
 
     features = extractor.extract(image)
     print(image.shape)
-    print(len(features))
+    print(features[0].shape)

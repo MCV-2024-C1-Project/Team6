@@ -36,7 +36,6 @@ def predict_command(args):
                               remove_background=args.remove_background,
                               remove_noise=args.remove_noise,
                               noise_filter_arguments=args.filter_type) # mapk, apk, (path, dist, raw_dist, db_image_descriptor)
-    feature_ids = getHistogramComponents(descriptor_subtype)
     output_result = []
     plotting_results = []
     if args.evaluate:
@@ -70,6 +69,8 @@ def predict_command(args):
         with open(os.path.join(output_path, "result.pkl"), "wb") as f:
             pickle.dump(output_result, f)
     if args.plot:
+        if descriptor_type == "Histogram":
+            feature_ids = getHistogramComponents(descriptor_subtype)
         navigator = ImageNavigator(plotting_results, feature_ids)
         navigator.show()
     
