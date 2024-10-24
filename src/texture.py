@@ -13,6 +13,8 @@ HistogramComponents = {}
 # Factory for creating texture extractors
 def TextureExtractorFactory(type:str, histogram_bins:int = 256):
     if type == "LBP":
+        return BlockLBPExtractor(histogram_bins)    
+    if type == "LBP_no_block":
         return LBPExtractor(histogram_bins)
     elif type == "DCT":
         return DCTExtractor(histogram_bins)
@@ -34,10 +36,11 @@ class TextureExtractor(object):
 #           2.5   12
 #           4     16
 class LBPExtractor(TextureExtractor):
-    def __init__(self, histogram_bins:int = 256, R=1, P=8):
+    def __init__(self, histogram_bins: int = 256, R=1, P=8):
         super(LBPExtractor, self).__init__(histogram_bins)
-        self.radius = R
-        self.n_points = P
+        self.R = R  # Radius of the LBP neighborhood
+        self.P = P  # Number of points (neighbors) in the LBP neighborhood
+        self.histogram_bins = histogram_bins
 
     def extract(self, image, normalize=True):
         if len(image.shape) == 3:
@@ -45,12 +48,13 @@ class LBPExtractor(TextureExtractor):
         else:
             gray_image = image
 
-        lbp = local_binary_pattern(gray_image, self.P, self.R)
-        print(lbp.shape)
-        plt.imshow(lbp,cmap='gray')
-        plt.show()
-        hist, _ = np.histogram(lbp, bins=np.arange(0, self.n_points + 3), range=(0, self.n_points + 2), density=normalize)
+        lbp = local_binary_pattern(gray_image, self.P, self.R, method='uniform')
         
+        # plt.imshow(lbp, cmap='gray')
+        # plt.show()
+        bin_edges = np.linspace(0, 255, num=self.histogram_bins + 1)
+        hist, _ = np.histogram(lbp.flatten(),bins=bin_edges)
+
         return hist
 
 class DCTExtractor(TextureExtractor):
@@ -69,10 +73,46 @@ class WaveletExtractor(TextureExtractor):
         return None
 
 class BlockHistogramExtractor(TextureExtractor):
-    def __init__(self, histogram_bins:int = 256, hist_type:str= "HSV", number_edge_block:int = 2):
-        self.hist_type = hist_type
+    def __init__(self, histogram_bins:int = 256, number_edge_block:int = 2):
         self.number_edge_block = number_edge_block
         super(BlockHistogramExtractor, self).__init__(histogram_bins)
+    
+    def extract(self, image, normalize = True):
+
+        sizei = image.shape[0]
+        sizej = image.shape[1]
+
+        sizei_block = int(sizei/self.number_edge_block)
+        sizej_block = int(sizej/self.number_edge_block)
+
+        image_vectors = []
+        for i in range(self.number_edge_block):
+            for j in range(self.number_edge_block):
+                i_left_bound = (sizei_block)*i
+                i_right_bound = (sizei_block*(i+1))
+                j_up_bound = (sizej_block)*j
+                j_down_bound = (sizej_block*(j+1))
+                # print("Square -----------------------")
+                # print(f"i bound [{i_left_bound},{i_right_bound}]")
+                # print(f"j bound[{j_up_bound},{j_down_bound}]")
+                # print("-----------------------")
+                block_image = image[i_left_bound:i_right_bound, j_up_bound:j_down_bound, :]
+                # imgplot = plt.imshow(block_image)
+                # plt.show()
+                image_vectors.append(block_image)
+        
+        hist = TextureExtractorFactory("LPB", self.histogram_bins)
+        hist_vector = [] #each histogram is a vector of histograms so we flaten them 
+        for subimage in image_vectors:
+            hist_vector = hist_vector + hist.extract(subimage, normalize)
+
+        return hist_vector
+    
+class BlockLBPExtractor(TextureExtractor):
+    def __init__(self, histogram_bins:int = 256, number_edge_block:int = 4):
+        self.number_edge_block = number_edge_block
+        super(BlockLBPExtractor, self).__init__(histogram_bins)
+        self.histogram_bins = histogram_bins
     
     def extract(self, image, normalize = True):
 
@@ -101,10 +141,12 @@ class BlockHistogramExtractor(TextureExtractor):
                 # plt.show()
                 image_vectors.append(block_image)
         
-        hist = TextureExtractorFactory(self.hist_type, self.histogram_bins)
-        hist_vector = [] #each histogram is a vector of histograms so we flaten them 
+        hist = TextureExtractorFactory("LBP_no_block", self.histogram_bins)
+        
+        hist_vector = np.zeros(0)
         for subimage in image_vectors:
-            hist_vector = hist_vector + hist.extract(subimage, normalize)
+            sub_hist = hist.extract(subimage, normalize)
+            hist_vector = np.concatenate((hist_vector, sub_hist))
 
         return hist_vector
 
@@ -113,9 +155,9 @@ if __name__ == "__main__":
     image = iio.imread('target/BBDD/bbdd_00003.jpg')
 
 
-    extractor = TextureExtractorFactory("LBP")
+    extractor = TextureExtractorFactory("LBP",64)
     
     # Extract features
     features = extractor.extract(image)
     print(image.shape)
-    print(features)
+    print(len(features))
