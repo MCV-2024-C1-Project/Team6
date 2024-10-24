@@ -7,6 +7,7 @@ import numpy as np
 import pickle
 
 from src.histogram import HistogramExtractorFactory
+from src.texture import TextureExtractorFactory
 
 def compute_descriptor(image, type, subtype, num_bins=256):  
     if type == "Histogram":
