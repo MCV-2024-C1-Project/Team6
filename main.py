@@ -97,7 +97,7 @@ if __name__ == '__main__':
     predict_parser.add_argument('--output', required=False, default="results/", help='Directory to save output files if --save-output is set')
     predict_parser.add_argument('--remove-background', action='store_true', help='If set, perform foreground cropping')
     predict_parser.add_argument('--remove-noise', action='store_true', help='If set, perform noise removal')
-    predict_parser.add_argument('--filter-type', required=False, default="Gaussian-3_1.0", help='Filter type to be used, in the format "filtertype-<kernel_size>, the format of kernel size in gaussian also contains the float value for sigma"')
+    predict_parser.add_argument('--filter-type', required=False, default="Gaussian-1.0", help='Filter type to be used, in the format "filtertype-<kernel_size> or filtertype-<sigma>"')
     predict_parser.set_defaults(func=predict_command)
 
     # Parse the arguments and call the appropriate function
