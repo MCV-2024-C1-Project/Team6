@@ -27,7 +27,7 @@ def TextureExtractorFactory(type:str, histogram_bins:int = 256):
                                  coef_normalize = coef_normalize)
         return extractor
     elif type == "Wavelet":
-        return WaveletExtractor(histogram_bins)
+        return WaveletExtractor('haar')
     else:
         sys.exit(f"ERROR: Unknown texture extraction type '{type}'")
 
@@ -44,11 +44,10 @@ class TextureExtractor(object):
 #           2.5   12
 #           4     16
 class LBPExtractor(TextureExtractor):
-    def __init__(self, histogram_bins: int = 256, R=1, P=8):
-        super(LBPExtractor, self).__init__(histogram_bins)
+    def __init__(self, R=1, P=8):
+        super(LBPExtractor, self).__init__()
         self.R = R  # Radius of the LBP neighborhood
         self.P = P  # Number of points (neighbors) in the LBP neighborhood
-        self.histogram_bins = histogram_bins
 
     def extract(self, image, normalize=True):
         if len(image.shape) == 3:
@@ -126,10 +125,9 @@ class DCTExtractor(TextureExtractor):
 
     
 class BlockLBPExtractor(TextureExtractor):
-    def __init__(self, histogram_bins:int = 256, number_edge_block:int = 4):
+    def __init__(self, number_edge_block:int = 4):
+        super(BlockLBPExtractor, self).__init__()
         self.number_edge_block = number_edge_block
-        super(BlockLBPExtractor, self).__init__(histogram_bins)
-        self.histogram_bins = histogram_bins
     
     def extract(self, image, normalize = True):
 
@@ -170,8 +168,8 @@ class BlockLBPExtractor(TextureExtractor):
 #possible wavelets
 # haar, db2, sym3, bior1.3
 class WaveletExtractor(TextureExtractor):
-    def __init__(self, histogram_bins: int = 256, wavelet: str = 'haar', levels: int = 3):
-        super(WaveletExtractor, self).__init__(histogram_bins)
+    def __init__(self, wavelet: str = 'haar', levels: int = 3):
+        super(WaveletExtractor, self).__init__(0)
         self.wavelet = wavelet  
         self.levels = levels  # Number of decomposition levels
 
@@ -190,9 +188,9 @@ class WaveletExtractor(TextureExtractor):
         for i in range(1, len(coeffs)):
             cH, cV, cD = coeffs[i]
             for sub_band in [cH, cV, cD]:
-                histogram, _ = np.histogram(sub_band, bins=self.histogram_bins, range=(sub_band.min(), sub_band.max()))
-                histogram = histogram / histogram.sum() if normalize else histogram
-                features.extend(histogram)
+                # histogram, _ = np.histogram(sub_band, bins=self.histogram_bins, range=(sub_band.min(), sub_band.max()))
+                # histogram = histogram / histogram.sum() if normalize else histogram
+                features.extend(sub_band)
 
         return np.array(features)
 
@@ -200,10 +198,10 @@ class WaveletExtractor(TextureExtractor):
 
 if __name__ == "__main__":
 
-    image = iio.imread('../W3/BBDD/bbdd_00165.jpg')
+    image = iio.imread('target/BBDD/bbdd_00003.jpg')
 
 
-    extractor = TextureExtractorFactory("LBP",64)
+    extractor = TextureExtractorFactory("Wavelet",64)
 
     features = extractor.extract(image)
     print(image.shape)
