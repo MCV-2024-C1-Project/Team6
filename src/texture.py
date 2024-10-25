@@ -37,6 +37,9 @@ def TextureExtractorFactory(type:str, histogram_bins:int = 256):
         return extractor
     elif type == "Wavelet":
         return WaveletExtractor('haar')
+    
+    elif type == "BlockWavelet":
+        return BlockWaveletExtractor()
     else:
         sys.exit(f"ERROR: Unknown texture extraction type '{type}'")
 
@@ -210,6 +213,7 @@ class BlockLBPExtractor(TextureExtractor):
 
         return hist_vector
 
+
 #possible wavelets
 # haar, db2, sym3, bior1.3
 class WaveletExtractor(TextureExtractor):
@@ -239,6 +243,44 @@ class WaveletExtractor(TextureExtractor):
 
         return np.array(features)
 
+class BlockWaveletExtractor(TextureExtractor):
+    def __init__(self, number_edge_block: int = 4, wavelet: str = 'haar', levels: int = 3):
+        super(BlockWaveletExtractor, self).__init__(0)
+        self.number_edge_block = number_edge_block
+        self.wavelet = wavelet
+        self.levels = levels
+
+    def extract(self, image, normalize=True):
+        if len(image.shape) == 3:
+            gray_image = skimage.color.rgb2gray(image)
+        else:
+            gray_image = image
+
+        sizei = gray_image.shape[0]
+        sizej = gray_image.shape[1]
+
+        sizei_block = int(sizei / self.number_edge_block)
+        sizej_block = int(sizej / self.number_edge_block)
+
+        features = []
+        for i in range(self.number_edge_block):
+            for j in range(self.number_edge_block):
+                i_left_bound = sizei_block * i
+                i_right_bound = sizei_block * (i + 1)
+                j_up_bound = sizej_block * j
+                j_down_bound = sizej_block * (j + 1)
+                
+                block = gray_image[i_left_bound:i_right_bound, j_up_bound:j_down_bound]
+                
+                coeffs = pywt.wavedec2(block, self.wavelet, level=self.levels)
+                
+                # Extract coefficients (LH, HL, HH)
+                for k in range(1, len(coeffs)):
+                    cH, cV, cD = coeffs[k]
+                    for sub_band in [cH, cV, cD]:
+                        features.extend(sub_band)
+
+        return np.array(features)
 
 
 if __name__ == "__main__":
@@ -246,7 +288,7 @@ if __name__ == "__main__":
     image = iio.imread('target/BBDD/bbdd_00003.jpg')
 
 
-    extractor = TextureExtractorFactory("Wavelet",64)
+    extractor = TextureExtractorFactory("BlockWavelet",64)
 
     features = extractor.extract(image)
     print(image.shape)
