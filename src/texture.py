@@ -17,12 +17,21 @@ def TextureExtractorFactory(type:str, histogram_bins:int = 256):
         return BlockLBPExtractor(histogram_bins)    
     if type == "LBP_no_block":
         return LBPExtractor(histogram_bins)
-    elif "DCT" in type:
+    elif "DCTConcat" in type:
         # Format: Texture-DCT_<block_fraction>_<coef_reduction_fraction>-0
         # fraction means block size = image size / block_fraction 
         # coef_reduction_fraction: in the slide
         _, block_fraction, coef_reduction_fraction, coef_normalize = type.split('_') 
-        extractor = DCTExtractor(block_fraction = int(block_fraction),
+        extractor = DCTConcatExtractor(block_fraction = int(block_fraction),
+                                 coef_reduction_fraction = float(coef_reduction_fraction),
+                                 coef_normalize = coef_normalize)
+        return extractor
+    elif "DCTPiecewise" in type:
+        # Format: Texture-DCT_<block_fraction>_<coef_reduction_fraction>-0
+        # fraction means block size = image size / block_fraction 
+        # coef_reduction_fraction: in the slide
+        _, block_fraction, coef_reduction_fraction, coef_normalize = type.split('_') 
+        extractor = DCTPiecewiseExtractor(block_fraction = int(block_fraction),
                                  coef_reduction_fraction = float(coef_reduction_fraction),
                                  coef_normalize = coef_normalize)
         return extractor
@@ -72,6 +81,28 @@ class DCTExtractor(TextureExtractor):
         self.block_fraction = block_fraction
         self.coef_reduction_fraction = coef_reduction_fraction
         self.coef_normalize = bool(coef_normalize)
+    def zigzag_scan(self, block, coef_reduction_fraction):
+        h, w = block.shape
+        result = []
+
+        for sum in range(h + w - 1):
+            if sum % 2 == 0:
+                for i in range(sum + 1):
+                    j = sum - i
+                    if i < h and j < w:
+                        result.append(block[j, i])
+            else:
+                for i in range(sum + 1):
+                    j = sum - i
+                    if i < h and j < w:
+                        result.append(block[i, j])
+        total_coeffs = len(result)
+        num_to_keep = int(total_coeffs * coef_reduction_fraction)
+        return result[:num_to_keep]
+
+class DCTConcatExtractor(DCTExtractor):
+    def __init__(self, block_fraction: int = 16, coef_reduction_fraction: float = 0.5, coef_normalize: int=0):
+        super(DCTConcatExtractor, self).__init__(block_fraction, coef_reduction_fraction, coef_normalize)
 
     def extract(self, image):
         if len(image.shape) == 3:
@@ -105,25 +136,39 @@ class DCTExtractor(TextureExtractor):
 
         return [dct_coefficients]
 
-    def zigzag_scan(self, block, coef_reduction_fraction):
-        h, w = block.shape
-        result = []
+class DCTPiecewiseExtractor(DCTExtractor):
+    def __init__(self, block_fraction: int = 16, coef_reduction_fraction: float = 0.5, coef_normalize: int=0):
+        super(DCTPiecewiseExtractor, self).__init__(block_fraction, coef_reduction_fraction, coef_normalize)
 
-        for sum in range(h + w - 1):
-            if sum % 2 == 0:
-                for i in range(sum + 1):
-                    j = sum - i
-                    if i < h and j < w:
-                        result.append(block[j, i])
-            else:
-                for i in range(sum + 1):
-                    j = sum - i
-                    if i < h and j < w:
-                        result.append(block[i, j])
-        total_coeffs = len(result)
-        num_to_keep = int(total_coeffs * coef_reduction_fraction)
-        return result[:num_to_keep]
+    def extract(self, image):
+        if len(image.shape) == 3:
+            gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray_image = image
+        fixed_size = 512
+        gray_image = cv2.resize(gray_image, (fixed_size,fixed_size), interpolation=cv2.INTER_AREA)
+        height, width = gray_image.shape
+        
+        block_size = fixed_size // self.block_fraction
+        block_size = max(block_size, 8) #min: 8, not too small block
+        if block_size % 2 != 0:
+            block_size += 1
 
+        dct_blocks = []
+        for count_i,i in enumerate(range(0, height, block_size)):
+            for count_j,j in enumerate(range(0, width, block_size)):
+                
+                block = gray_image[i:i+block_size, j:j+block_size]
+                if block.shape[0] == block_size and block.shape[1] == block_size:
+                    # DCT 
+                    dct_block = cv2.dct(np.float32(block))
+                    # zigzag scan
+                    zigzag = self.zigzag_scan(dct_block, coef_reduction_fraction = self.coef_reduction_fraction)
+                    if self.coef_normalize:
+                        zigzag = (zigzag - np.min(zigzag)) / (np.max(zigzag) - np.min(zigzag))
+                    dct_blocks.append(zigzag)
+        
+        return dct_blocks
     
 class BlockLBPExtractor(TextureExtractor):
     def __init__(self, histogram_bins:int = 256, number_edge_block:int = 4):
