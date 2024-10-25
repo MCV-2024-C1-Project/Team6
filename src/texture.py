@@ -18,6 +18,7 @@ def TextureExtractorFactory(type:str, histogram_bins:int = 256):
     if type == "LBP_no_block":
         return LBPExtractor(histogram_bins)
     elif "DCT" in type:
+        # Format: Texture-DCT_<block_fraction>_<coef_reduction_fraction>-0
         # fraction means block size = image size / block_fraction 
         # coef_reduction_fraction: in the slide
         _, block_fraction, coef_reduction_fraction, coef_normalize = type.split('_') 
