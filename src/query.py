@@ -10,6 +10,7 @@ from src.performance import compute_performance
 from src.background_remover import crop_foreground
 from src.denoising import noise_removal
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 def retrieve_K(descriptor, db_descriptor, measure, k):
     measure = MeasureFactory(measure)
@@ -27,7 +28,7 @@ def prediction(input_path, db_path, k, descriptor_type, descriptor_subtype, num_
 
     result = []
 
-    for path in image_paths:
+    for path in tqdm(image_paths, desc="Processing images"):
         raw_image = imageio.imread(path)
         if remove_background:
             list_image = crop_foreground(raw_image, False) # now crop image may generate more than one , ideally starting a top left and ending a bottom right

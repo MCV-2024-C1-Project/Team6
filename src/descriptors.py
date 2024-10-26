@@ -5,18 +5,21 @@ import imageio as iio
 import skimage.color 
 import numpy as np
 import pickle
+from tqdm import tqdm
 
 from src.histogram import HistogramExtractorFactory
 from src.texture import TextureExtractorFactory
 
-def compute_descriptor(image, type, subtype, num_bins=256):  
-    if type == "Histogram":
+def compute_descriptor(image, dtype, dsubtype, num_bins=256):  
+    if dtype == "Histogram":
         #setup the type of histogram you want
-        color_mode = subtype #GRAY or RGB from this moment
-        hist_extractor = HistogramExtractorFactory(type = color_mode, histogram_bins = num_bins)
+        color_mode = dsubtype #GRAY or RGB from this moment
+        hist_extractor = HistogramExtractorFactory(type_str = color_mode, histogram_bins = num_bins)
         return hist_extractor.extract(image)
-    elif type == "Texture":
-        hist_extractor = TextureExtractorFactory(type = color_mode, histogram_bins = num_bins)
+    elif dtype == "Texture":
+        texture_type = dsubtype
+        texture_extractor = TextureExtractorFactory(type_str = texture_type, histogram_bins = num_bins)
+        return texture_extractor.extract(image)
     else:
         sys.exit("Not yet implemented")
 
@@ -25,7 +28,7 @@ def generate_descriptors_DBfile(input_folder, output_folder, descriptor_type, de
 
     image_paths = get_all_jpg_images(input_folder)
     descriptor_list = []
-    for path in image_paths:
+    for path in tqdm(image_paths):
         raw_image = iio.imread(path)
         descriptor = compute_descriptor(raw_image, descriptor_type, descriptor_subtype, num_bins)
         descriptor_list.append( (path, descriptor) ) #changed from array to tuple, more easily iteratable
