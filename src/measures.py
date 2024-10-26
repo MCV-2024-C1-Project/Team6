@@ -1,6 +1,7 @@
 #measures
 import numpy as np
 import sys
+from numpy.linalg import norm
 
 def MeasureFactory(type:str):
     #we'll treat all as a distance measurement, so the similarities we'll treated as negative
@@ -26,6 +27,8 @@ def MeasureFactory(type:str):
         return LInfinityDistance()
     if type == "KLD-Median":
         return KLDivergenceMedian()
+    if type == "Cosine-Median": #TODO   
+        return CosineMedian()
     else:
         sys.exit("ERROR: Unknow Measure type: " + type)
     
@@ -170,5 +173,16 @@ class KLDivergenceMedian(Measurement):
             Q = im2_hist[c] + 1e-6
             kld = np.sum(np.nan_to_num(P*np.log(P/Q)))
             dist.append(kld)
+        final_dist = np.median(np.array(dist))
+        return final_dist,  dist
+    
+class CosineMedian(Measurement):
+    def __call__(self, im1_hist: list, im2_hist: list):
+        dist = []
+        for c in range(len(im1_hist)):
+            if im1_hist[c].shape != im2_hist[c].shape:
+                sys.exit(f"ERROR: histograms in {c} aren't the same shape")
+            cosine = np.dot(im1_hist[c],im2_hist[c])/(norm(im1_hist[c])*norm(im2_hist[c]))
+            dist.append(1-cosine)
         final_dist = np.median(np.array(dist))
         return final_dist,  dist

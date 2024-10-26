@@ -37,7 +37,7 @@ def TextureExtractorFactory(type_str: str, histogram_bins: int = 256):
         _, block_fraction, coef_reduction_fraction, coef_normalize = type_str.split('_') 
         extractor = DCTConcatExtractor(block_fraction = int(block_fraction),
                                  coef_reduction_fraction = float(coef_reduction_fraction),
-                                 coef_normalize = coef_normalize)
+                                 coef_normalize = bool(coef_normalize))
         return extractor
     elif "DCTPiecewise" in type_str:
         # Format: Texture-DCT_<block_fraction>_<coef_reduction_fraction>-0
@@ -46,7 +46,7 @@ def TextureExtractorFactory(type_str: str, histogram_bins: int = 256):
         _, block_fraction, coef_reduction_fraction, coef_normalize = type_str.split('_') 
         extractor = DCTPiecewiseExtractor(block_fraction = int(block_fraction),
                                  coef_reduction_fraction = float(coef_reduction_fraction),
-                                 coef_normalize = coef_normalize)
+                                 coef_normalize = bool(coef_normalize))
         return extractor
 
 
@@ -102,11 +102,11 @@ class LBPExtractor(TextureExtractor):
         return histogram
 
 class DCTExtractor(TextureExtractor):
-    def __init__(self, block_fraction: int = 16, coef_reduction_fraction: float = 0.5, coef_normalize: int=0):
+    def __init__(self, block_fraction: int = 16, coef_reduction_fraction: float = 0.5, coef_normalize: bool=False):
         super(DCTExtractor, self).__init__(histogram_bins=None)
         self.block_fraction = block_fraction
         self.coef_reduction_fraction = coef_reduction_fraction
-        self.coef_normalize = bool(coef_normalize)
+        self.coef_normalize = coef_normalize
     def zigzag_scan(self, block, coef_reduction_fraction):
         h, w = block.shape
         result = []
