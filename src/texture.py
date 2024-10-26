@@ -16,6 +16,12 @@ def TextureExtractorFactory(type_str: str, histogram_bins: int = 256):
 
     parts = type_str.split('_')
 
+    if "BlockLBP" in type_str:
+        # Format: BlockLBP_<number_edge_block>_<R>_<P>
+        number_edge_block = int(parts[1]) if len(parts) > 1 else 4
+        R = int(parts[2]) if len(parts) > 2 else 1
+        P = int(parts[3]) if len(parts) > 3 else 8
+        return BlockLBPExtractor(number_edge_block=number_edge_block, R=R, P=P, histogram_bins=histogram_bins)
 
     if "LBP" in type_str:
         # Format: LBP_<R>_<P>
@@ -23,12 +29,6 @@ def TextureExtractorFactory(type_str: str, histogram_bins: int = 256):
         P = int(parts[2]) if len(parts) > 2 else 8
         return LBPExtractor(R=R, P=P, histogram_bins=histogram_bins)
     
-    elif "BlockLBP" in type_str:
-        # Format: BlockLBP_<number_edge_block>_<R>_<P>
-        number_edge_block = int(parts[1]) if len(parts) > 1 else 4
-        R = int(parts[2]) if len(parts) > 2 else 1
-        P = int(parts[3]) if len(parts) > 3 else 8
-        return BlockLBPExtractor(number_edge_block=number_edge_block, R=R, P=P, histogram_bins=histogram_bins)
     
     elif "DCTConcat" in type_str:
         # Format: Texture-DCT_<block_fraction>_<coef_reduction_fraction>-0
@@ -49,19 +49,19 @@ def TextureExtractorFactory(type_str: str, histogram_bins: int = 256):
                                  coef_normalize = coef_normalize)
         return extractor
 
-
-    elif type == "Wavelet":
-        # Format: Wavelet_<wavelet>_<levels>
-        wavelet = parts[1] if len(parts) > 1 else 'haar'
-        levels = int(parts[2]) if len(parts) > 2 else 3
-        return WaveletExtractor(wavelet=wavelet, levels=levels)
-
-    elif type == "BlockWavelet":
+    elif "BlockWavelet" in type_str:
         # Format: BlockWavelet_<number_edge_block>_<wavelet>_<levels>
         number_edge_block = int(parts[1]) if len(parts) > 1 else 3
         wavelet = parts[2] if len(parts) > 2 else 'haar'
         levels = int(parts[3]) if len(parts) > 3 else 3
         return BlockWaveletExtractor(number_edge_block=number_edge_block, wavelet=wavelet, levels=levels)
+
+    elif "Wavelet" in type_str:
+        # Format: Wavelet_<wavelet>_<levels>
+        wavelet = parts[1] if len(parts) > 1 else 'haar'
+        levels = int(parts[2]) if len(parts) > 2 else 3
+        return WaveletExtractor(wavelet=wavelet, levels=levels)
+
     
     else:
         sys.exit(f"ERROR: Unknown texture extraction type '{type}'")
@@ -90,12 +90,14 @@ class LBPExtractor(TextureExtractor):
             gray_image = skimage.color.rgb2gray(image)
         else:
             gray_image = image
+        gray_image = (gray_image * 255).astype(np.uint8)
 
+        
         lbp = local_binary_pattern(gray_image, self.P, self.R, method='uniform')
         
         # plt.imshow(lbp, cmap='gray')
         # plt.show()
-        bin_edges = np.linspace(0, 255, num=self.histogram_bins + 1)
+        bin_edges = np.linspace(0, self.P + 1, num=self.histogram_bins + 1)
         histogram, _ = np.histogram(lbp.flatten(),bins=bin_edges)
         histogram = histogram / histogram.sum() if normalize else histogram
 
@@ -205,7 +207,7 @@ class BlockLBPExtractor(TextureExtractor):
         self.histogram_bins = histogram_bins
     
     def extract(self, image, normalize = True):
-
+        
         sizei = image.shape[0]
         sizej = image.shape[1]
 
@@ -230,7 +232,7 @@ class BlockLBPExtractor(TextureExtractor):
                 # imgplot = plt.imshow(block_image)
                 # plt.show()
                 image_vectors.append(block_image)
-        
+        # print(self.R,self.P,self.number_edge_block)
         hist = TextureExtractorFactory(f'LBP_{self.R}_{self.P}', self.histogram_bins)
         
         hist_vector = np.zeros(0)
@@ -251,11 +253,12 @@ class WaveletExtractor(TextureExtractor):
 
     def extract(self, image, normalize=True):
         # Convert the image to grayscale if it's not already
+        fixed_size = 256
         if len(image.shape) == 3:
             gray_image = skimage.color.rgb2gray(image)
         else:
             gray_image = image
-
+        gray_image = cv2.resize(gray_image, (fixed_size,fixed_size), interpolation=cv2.INTER_AREA)
         coeffs = pywt.wavedec2(gray_image, self.wavelet, level=self.levels)
 
         # Extract the detail coefficients (LH, HL, HH)
@@ -268,10 +271,10 @@ class WaveletExtractor(TextureExtractor):
                 # histogram = histogram / histogram.sum() if normalize else histogram
                 features.extend(np.array(sub_band))
 
-        return np.array(features)
+        return np.array(features).flatten()
 
 class BlockWaveletExtractor(TextureExtractor):
-    def __init__(self, number_edge_block: int = 3, wavelet: str = 'haar', levels: int = 3):
+    def __init__(self, number_edge_block: int = 3, wavelet: str = 'haar', levels: int = 1):
         super(BlockWaveletExtractor, self).__init__(0)
         self.number_edge_block = number_edge_block
         self.wavelet = wavelet
@@ -282,7 +285,7 @@ class BlockWaveletExtractor(TextureExtractor):
             gray_image = skimage.color.rgb2gray(image)
         else:
             gray_image = image
-
+        gray_image = cv2.resize(gray_image, (256,256))
         sizei = gray_image.shape[0]
         sizej = gray_image.shape[1]
 
@@ -307,7 +310,7 @@ class BlockWaveletExtractor(TextureExtractor):
                     for sub_band in [cH, cV, cD]:
                         features.extend(sub_band)
 
-        return np.array(features)
+        return np.array(features).flatten()
 
 
 if __name__ == "__main__":
@@ -315,13 +318,18 @@ if __name__ == "__main__":
     image = iio.imread('target/BBDD/bbdd_00003.jpg')
 
 
-    extractor = TextureExtractorFactory("BlockWavelet",64)
+    extractor = TextureExtractorFactory("BlockWavelet_4_haar_1",64)
+    # extractor = TextureExtractorFactory("DCTPiecewise_16_0.1_0",64)
+
 
     features = extractor.extract(image)
     print(image.shape)
-    print(len(features[1]))
+    # print(features)
+    # print(features[1])
+    # print(features.shape)
+
     print(len(features))
-    print(features.shape)
-    print(features[1])
+    print(len(features[1]))
+    print(type(features))
 
 
