@@ -10,15 +10,15 @@ from tqdm import tqdm
 from src.histogram import HistogramExtractorFactory
 from src.texture import TextureExtractorFactory
 
-def compute_descriptor(image, type, subtype, num_bins=256):  
-    if type == "Histogram":
+def compute_descriptor(image, dtype, dsubtype, num_bins=256):  
+    if dtype == "Histogram":
         #setup the type of histogram you want
-        color_mode = subtype #GRAY or RGB from this moment
-        hist_extractor = HistogramExtractorFactory(type = color_mode, histogram_bins = num_bins)
+        color_mode = dsubtype #GRAY or RGB from this moment
+        hist_extractor = HistogramExtractorFactory(type_str = color_mode, histogram_bins = num_bins)
         return hist_extractor.extract(image)
-    elif type == "Texture":
-        texture_type = subtype
-        texture_extractor = TextureExtractorFactory(type = texture_type, histogram_bins = num_bins)
+    elif dtype == "Texture":
+        texture_type = dsubtype
+        texture_extractor = TextureExtractorFactory(type_str = texture_type, histogram_bins = num_bins)
         return texture_extractor.extract(image)
     else:
         sys.exit("Not yet implemented")

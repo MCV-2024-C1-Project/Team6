@@ -11,35 +11,48 @@ from skimage.feature import local_binary_pattern
 # Dictionary to hold different histogram components (if needed)
 HistogramComponents = {}
 
-# Factory for creating texture extractors
-def TextureExtractorFactory(type:str, histogram_bins:int = 256):
+
+def TextureExtractorFactory(type_str: str, histogram_bins: int = 256):
+
+    parts = type_str.split('_')
+    type = parts[0]
+
     if type == "LBP":
-        return BlockLBPExtractor(histogram_bins)    
-    if type == "LBP_no_block":
-        return LBPExtractor(histogram_bins)
-    elif "DCTConcat" in type:
-        # Format: Texture-DCT_<block_fraction>_<coef_reduction_fraction>-0
-        # fraction means block size = image size / block_fraction 
-        # coef_reduction_fraction: in the slide
-        _, block_fraction, coef_reduction_fraction, coef_normalize = type.split('_') 
-        extractor = DCTConcatExtractor(block_fraction = int(block_fraction),
-                                 coef_reduction_fraction = float(coef_reduction_fraction),
-                                 coef_normalize = coef_normalize)
-        return extractor
-    elif "DCTPiecewise" in type:
-        # Format: Texture-DCT_<block_fraction>_<coef_reduction_fraction>-0
-        # fraction means block size = image size / block_fraction 
-        # coef_reduction_fraction: in the slide
-        _, block_fraction, coef_reduction_fraction, coef_normalize = type.split('_') 
-        extractor = DCTPiecewiseExtractor(block_fraction = int(block_fraction),
-                                 coef_reduction_fraction = float(coef_reduction_fraction),
-                                 coef_normalize = coef_normalize)
-        return extractor
-    elif type == "Wavelet":
-        return WaveletExtractor('haar')
+        # Format: LBP_<R>_<P>
+        R = int(parts[1]) if len(parts) > 1 else 1
+        P = int(parts[2]) if len(parts) > 2 else 8
+        return LBPExtractor(R=R, P=P, histogram_bins=histogram_bins)
     
+    elif type == "BlockLBP":
+        # Format: BlockLBP_<number_edge_block>_<R>_<P>
+        number_edge_block = int(parts[1]) if len(parts) > 1 else 4
+        R = int(parts[2]) if len(parts) > 2 else 1
+        P = int(parts[3]) if len(parts) > 3 else 8
+        return BlockLBPExtractor(number_edge_block=number_edge_block, R=R, P=P, histogram_bins=histogram_bins)
+    
+    elif type in ["DCTConcat", "DCTPiecewise"]:
+        # Format: DCTConcat_<block_fraction>_<coef_reduction_fraction>_<coef_normalize>
+        block_fraction = int(parts[1]) if len(parts) > 1 else 16
+        coef_reduction_fraction = float(parts[2]) if len(parts) > 2 else 0.5
+        coef_normalize = bool(int(parts[3])) if len(parts) > 3 else False
+        if type == "DCTConcat":
+            return DCTConcatExtractor(block_fraction, coef_reduction_fraction, coef_normalize)
+        else:
+            return DCTPiecewiseExtractor(block_fraction, coef_reduction_fraction, coef_normalize)
+
+    elif type == "Wavelet":
+        # Format: Wavelet_<wavelet>_<levels>
+        wavelet = parts[1] if len(parts) > 1 else 'haar'
+        levels = int(parts[2]) if len(parts) > 2 else 3
+        return WaveletExtractor(wavelet=wavelet, levels=levels)
+
     elif type == "BlockWavelet":
-        return BlockWaveletExtractor()
+        # Format: BlockWavelet_<number_edge_block>_<wavelet>_<levels>
+        number_edge_block = int(parts[1]) if len(parts) > 1 else 3
+        wavelet = parts[2] if len(parts) > 2 else 'haar'
+        levels = int(parts[3]) if len(parts) > 3 else 3
+        return BlockWaveletExtractor(number_edge_block=number_edge_block, wavelet=wavelet, levels=levels)
+    
     else:
         sys.exit(f"ERROR: Unknown texture extraction type '{type}'")
 
@@ -56,10 +69,11 @@ class TextureExtractor(object):
 #           2.5   12
 #           4     16
 class LBPExtractor(TextureExtractor):
-    def __init__(self, R=1, P=8):
+    def __init__(self, R=1, P=8,histogram_bins:int = 256):
         super(LBPExtractor, self).__init__()
         self.R = R  # Radius of the LBP neighborhood
         self.P = P  # Number of points (neighbors) in the LBP neighborhood
+        self.histogram_bins = histogram_bins
 
     def extract(self, image, normalize=True):
         if len(image.shape) == 3:
@@ -173,9 +187,12 @@ class DCTPiecewiseExtractor(DCTExtractor):
         return dct_blocks
     
 class BlockLBPExtractor(TextureExtractor):
-    def __init__(self, number_edge_block:int = 4):
+    def __init__(self, number_edge_block: int = 4, R: int = 1, P: int = 8, histogram_bins: int = 256):
         super(BlockLBPExtractor, self).__init__()
         self.number_edge_block = number_edge_block
+        self.R = R
+        self.P = P
+        self.histogram_bins = histogram_bins
     
     def extract(self, image, normalize = True):
 
@@ -204,7 +221,7 @@ class BlockLBPExtractor(TextureExtractor):
                 # plt.show()
                 image_vectors.append(block_image)
         
-        hist = TextureExtractorFactory("LBP_no_block", self.histogram_bins)
+        hist = TextureExtractorFactory(f'LBP_{self.R}_{self.P}', self.histogram_bins)
         
         hist_vector = np.zeros(0)
         for subimage in image_vectors:
@@ -239,12 +256,12 @@ class WaveletExtractor(TextureExtractor):
             for sub_band in [cH, cV, cD]:
                 # histogram, _ = np.histogram(sub_band, bins=self.histogram_bins, range=(sub_band.min(), sub_band.max()))
                 # histogram = histogram / histogram.sum() if normalize else histogram
-                features.extend(sub_band)
+                features.extend(np.array(sub_band))
 
         return np.array(features)
 
 class BlockWaveletExtractor(TextureExtractor):
-    def __init__(self, number_edge_block: int = 4, wavelet: str = 'haar', levels: int = 3):
+    def __init__(self, number_edge_block: int = 3, wavelet: str = 'haar', levels: int = 3):
         super(BlockWaveletExtractor, self).__init__(0)
         self.number_edge_block = number_edge_block
         self.wavelet = wavelet
@@ -292,4 +309,9 @@ if __name__ == "__main__":
 
     features = extractor.extract(image)
     print(image.shape)
-    print(features[0].shape)
+    print(len(features[1]))
+    print(len(features))
+    print(features.shape)
+    print(features[1])
+
+
