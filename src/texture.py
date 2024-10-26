@@ -15,30 +15,40 @@ HistogramComponents = {}
 def TextureExtractorFactory(type_str: str, histogram_bins: int = 256):
 
     parts = type_str.split('_')
-    type = parts[0]
 
-    if type == "LBP":
+
+    if "LBP" in type_str:
         # Format: LBP_<R>_<P>
         R = int(parts[1]) if len(parts) > 1 else 1
         P = int(parts[2]) if len(parts) > 2 else 8
         return LBPExtractor(R=R, P=P, histogram_bins=histogram_bins)
     
-    elif type == "BlockLBP":
+    elif "BlockLBP" in type_str:
         # Format: BlockLBP_<number_edge_block>_<R>_<P>
         number_edge_block = int(parts[1]) if len(parts) > 1 else 4
         R = int(parts[2]) if len(parts) > 2 else 1
         P = int(parts[3]) if len(parts) > 3 else 8
         return BlockLBPExtractor(number_edge_block=number_edge_block, R=R, P=P, histogram_bins=histogram_bins)
     
-    elif type in ["DCTConcat", "DCTPiecewise"]:
-        # Format: DCTConcat_<block_fraction>_<coef_reduction_fraction>_<coef_normalize>
-        block_fraction = int(parts[1]) if len(parts) > 1 else 16
-        coef_reduction_fraction = float(parts[2]) if len(parts) > 2 else 0.5
-        coef_normalize = bool(int(parts[3])) if len(parts) > 3 else False
-        if type == "DCTConcat":
-            return DCTConcatExtractor(block_fraction, coef_reduction_fraction, coef_normalize)
-        else:
-            return DCTPiecewiseExtractor(block_fraction, coef_reduction_fraction, coef_normalize)
+    elif "DCTConcat" in type_str:
+        # Format: Texture-DCT_<block_fraction>_<coef_reduction_fraction>-0
+        # fraction means block size = image size / block_fraction 
+        # coef_reduction_fraction: in the slide
+        _, block_fraction, coef_reduction_fraction, coef_normalize = type_str.split('_') 
+        extractor = DCTConcatExtractor(block_fraction = int(block_fraction),
+                                 coef_reduction_fraction = float(coef_reduction_fraction),
+                                 coef_normalize = coef_normalize)
+        return extractor
+    elif "DCTPiecewise" in type_str:
+        # Format: Texture-DCT_<block_fraction>_<coef_reduction_fraction>-0
+        # fraction means block size = image size / block_fraction 
+        # coef_reduction_fraction: in the slide
+        _, block_fraction, coef_reduction_fraction, coef_normalize = type_str.split('_') 
+        extractor = DCTPiecewiseExtractor(block_fraction = int(block_fraction),
+                                 coef_reduction_fraction = float(coef_reduction_fraction),
+                                 coef_normalize = coef_normalize)
+        return extractor
+
 
     elif type == "Wavelet":
         # Format: Wavelet_<wavelet>_<levels>
