@@ -19,13 +19,13 @@ def TextureExtractorFactory(type_str: str, histogram_bins: int = 256):
     if "BlockLBP" in type_str:
         # Format: BlockLBP_<number_edge_block>_<R>_<P>
         number_edge_block = int(parts[1]) if len(parts) > 1 else 4
-        R = int(parts[2]) if len(parts) > 2 else 1
+        R = float(parts[2]) if len(parts) > 2 else 1
         P = int(parts[3]) if len(parts) > 3 else 8
         return BlockLBPExtractor(number_edge_block=number_edge_block, R=R, P=P, histogram_bins=histogram_bins)
 
     if "LBP" in type_str:
         # Format: LBP_<R>_<P>
-        R = int(parts[1]) if len(parts) > 1 else 1
+        R = float(parts[1]) if len(parts) > 1 else 1
         P = int(parts[2]) if len(parts) > 2 else 8
         return LBPExtractor(R=R, P=P, histogram_bins=histogram_bins)
     
@@ -96,8 +96,8 @@ class LBPExtractor(TextureExtractor):
         lbp = local_binary_pattern(gray_image, self.P, self.R, method='uniform')
         
         # plt.imshow(lbp, cmap='gray')
-        # plt.show()
-        bin_edges = np.linspace(0, self.P + 1, num=self.histogram_bins + 1)
+        # plt.show() bin_edges = np.linspace(0, P + 1, num=P + 2)
+        bin_edges = np.linspace(0, self.P + 1, num=self.P + 2)
         histogram, _ = np.histogram(lbp.flatten(),bins=bin_edges)
         histogram = histogram / histogram.sum() if normalize else histogram
 
@@ -318,7 +318,7 @@ if __name__ == "__main__":
     image = iio.imread('target/BBDD/bbdd_00003.jpg')
 
 
-    extractor = TextureExtractorFactory("BlockWavelet_4_haar_1",64)
+    extractor = TextureExtractorFactory("LBP_4_1.2_5",64)
     # extractor = TextureExtractorFactory("DCTPiecewise_16_0.1_0",64)
 
 
