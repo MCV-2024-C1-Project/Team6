@@ -197,8 +197,9 @@ def frame_detector(image):
     return foreground
 
 def frame_detector_week3(image):
-    foreground = foreground_treshold3(image, 3)
-    foreground = foreground_filter(foreground)
+    
+    # foreground = foreground_treshold3(image, 3)
+    # foreground = foreground_filter(foreground)
     # plot_demo2(foreground, foreground2, 'Mask Input', 'Mask Result')
     # plot_demo(image, foreground, 'Final Result')
     return foreground

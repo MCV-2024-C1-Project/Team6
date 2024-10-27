@@ -1,6 +1,7 @@
 import imageio
 import sys
 import os
+import numpy as np
 from skimage.color import rgb2gray
 from src.descriptors import compute_descriptor
 from src.descriptors import get_all_jpg_images
@@ -8,6 +9,7 @@ from src.descriptors import load_descriptors
 from src.measures import MeasureFactory
 from src.performance import compute_performance
 from src.background_remover import crop_foreground
+from src.background_remover2 import frame_detector
 from src.denoising import noise_removal
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -31,10 +33,12 @@ def prediction(input_path, db_path, k, descriptor_type, descriptor_subtype, num_
     for path in tqdm(image_paths, desc="Processing images"):
         raw_image = imageio.imread(path)
         if remove_background:
-            list_image = crop_foreground(raw_image, False) # now crop image may generate more than one , ideally starting a top left and ending a bottom right
+            list_image = frame_detector(raw_image, False) # now crop image may generate more than one , ideally starting a top left and ending a bottom right
+            # print(raw_image.dtype, np.max(raw_image))
+            # print(list_image[0].dtype, np.max(list_image[0]))
             # _, ax = plt.subplots(1,2)
             # ax[0].imshow(raw_image)
-            # ax[1].imshow(image)
+            # ax[1].imshow(list_image[0])
             # plt.show()
         else:
             list_image = [raw_image]
