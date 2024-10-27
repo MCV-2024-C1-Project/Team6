@@ -15,6 +15,13 @@ HistogramComponents = {}
 def TextureExtractorFactory(type_str: str, histogram_bins: int = 256):
 
     parts = type_str.split('_')
+    
+    if "PiecewiseBlockLBP" in type_str:
+        # Format: BlockLBP_<number_edge_block>_<R>_<P>
+        number_edge_block = int(parts[1]) if len(parts) > 1 else 4
+        R = float(parts[2]) if len(parts) > 2 else 1
+        P = int(parts[3]) if len(parts) > 3 else 8
+        return PiecewiseBlockLBPExtractor(number_edge_block=number_edge_block, R=R, P=P, histogram_bins=histogram_bins)
 
     if "BlockLBP" in type_str:
         # Format: BlockLBP_<number_edge_block>_<R>_<P>
@@ -102,6 +109,40 @@ class LBPExtractor(TextureExtractor):
         histogram = histogram / histogram.sum() if normalize else histogram
 
         return histogram
+
+class PiecewiseBlockLBPExtractor(TextureExtractor):
+    def __init__(self, number_edge_block: int = 4, R: int = 1, P: int = 8, histogram_bins: int = 256):
+        super(PiecewiseBlockLBPExtractor, self).__init__()
+        self.number_edge_block = number_edge_block
+        self.R = R
+        self.P = P
+        self.histogram_bins = histogram_bins
+    
+    def extract(self, image, normalize=True):
+        sizei = image.shape[0]
+        sizej = image.shape[1]
+
+        sizei_block = int(sizei / self.number_edge_block)
+        sizej_block = int(sizej / self.number_edge_block)
+
+        histograms = []  # List to hold histograms for each block
+        
+        # Loop through each block
+        for i in range(self.number_edge_block):
+            for j in range(self.number_edge_block):
+                i_left_bound = (sizei_block) * i
+                i_right_bound = (sizei_block * (i + 1))
+                j_up_bound = (sizej_block) * j
+                j_down_bound = (sizej_block * (j + 1))
+                
+                block_image = image[i_left_bound:i_right_bound, j_up_bound:j_down_bound, :]
+                hist = TextureExtractorFactory(f'LBP_{self.R}_{self.P}', self.histogram_bins)
+                
+                sub_hist = hist.extract(block_image, normalize)
+                histograms.append(sub_hist)  
+
+        return histograms 
+
 
 class DCTExtractor(TextureExtractor):
     def __init__(self, block_fraction: int = 16, coef_reduction_fraction: float = 0.5, coef_normalize: bool=False):
@@ -313,12 +354,14 @@ class BlockWaveletExtractor(TextureExtractor):
         return np.array(features).flatten()
 
 
+
+
 if __name__ == "__main__":
 
     image = iio.imread('target/BBDD/bbdd_00003.jpg')
 
 
-    extractor = TextureExtractorFactory("LBP_4_1.2_5",64)
+    extractor = TextureExtractorFactory("PiecewiseBlockLBP_4_1.2_5",64)
     # extractor = TextureExtractorFactory("DCTPiecewise_16_0.1_0",64)
 
 
