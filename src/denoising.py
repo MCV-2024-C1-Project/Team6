@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
 from scipy.ndimage import median_filter
 from scipy.ndimage import uniform_filter
+from skimage.metrics import structural_similarity as ssim
+from skimage.metrics import peak_signal_noise_ratio as psnr
 
 class Filter(object):
     def __init__(self, kernel:int = 3):
@@ -106,10 +108,14 @@ def test_sigma():
             axarr[i].set_title(f"Test sigma {str(test_sigma[i])}")
         plt.show()
 
-def compare_all_method():
+def compare_all_method(l=[]):
     dataset_folder = "qsd1_w3/"
+    if len(l)>0:
+        list_path = l
+    else:
+        list_path = get_all_jpg_images(dataset_folder)
     # compare 3 methods
-    for image_path in get_all_jpg_images(dataset_folder):
+    for image_path in list_path:
         print(f"Image: {image_path}")
         raw_image = iio.imread(image_path)
         gaussian_image = noise_remove(raw_image, type_filter="Gaussian", sigma=1.0)
@@ -140,11 +146,107 @@ def compare_all_method():
         #imgplot = plt.imshow(raw_image)
         plt.show()
 
+
+def test_ssim_psnr(sigma_value=1.0, kernel_size=3, plot=True):
+    queryset_folder = "qsd1_w3/"
+    dataset_folder = "qsd1_w3/non_augmented/"
+    query_set = get_all_jpg_images(queryset_folder)
+    data_set = get_all_jpg_images(dataset_folder)
+    gaussian_results = ([],[])
+    median_results = ([],[])
+    uniform_results = ([],[])
+
+    for query_image_path, data_image_path in zip(query_set, data_set):
+        query_image = iio.imread(query_image_path)
+        gaussian_image = noise_remove(query_image, type_filter="Gaussian", sigma=sigma_value)
+        median_image = noise_remove(query_image, type_filter="Median", kernel_size=kernel_size)
+        uniform_image = noise_remove(query_image, type_filter="Uniform", kernel_size=kernel_size)
+        real_image = iio.imread(data_image_path)
+        
+        gaussian_results[0].append(ssim(gaussian_image, real_image, channel_axis=2))
+        gaussian_results[1].append(psnr(gaussian_image, real_image))
+        median_results[0].append(ssim(median_image, real_image, channel_axis=2))
+        median_results[1].append(psnr(median_image, real_image))
+        uniform_results[0].append(ssim(uniform_image, real_image, channel_axis=2))
+        uniform_results[1].append(psnr(uniform_image, real_image))
+        difference_query_real = (ssim(query_image, real_image, channel_axis=2), psnr(query_image, real_image))
+        #plot
+        if plot:
+            f, axarr = plt.subplots(3,2)
+            f.suptitle(f"Test for all methods kernel {kernel_size:.2f} and sigma {sigma_value:.2f}f")
+            axarr[0,0].imshow(query_image)
+            axarr[0,0].get_xaxis().set_visible(False)
+            axarr[0,0].get_yaxis().set_visible(False)
+            axarr[0,0].set_title(f"Query image, ssim: {difference_query_real[0]:.2f} psnr:{difference_query_real[1]:.2f}")
+
+            axarr[0,1].imshow(gaussian_image)
+            axarr[0,1].get_xaxis().set_visible(False)
+            axarr[0,1].get_yaxis().set_visible(False)
+            axarr[0,1].set_title(f"Gaussian image, ssim: {gaussian_results[0][-1]:.2f} psnr:{gaussian_results[1][-1]:.2f}")
+
+            axarr[1,0].imshow(median_image)
+            axarr[1,0].get_xaxis().set_visible(False)
+            axarr[1,0].get_yaxis().set_visible(False)
+            axarr[1,0].set_title(f"Median image, ssim: {median_results[0][-1]:.2f} psnr:{median_results[1][-1]:.2f}")
+
+            axarr[1,1].imshow(uniform_image)
+            axarr[1,1].get_xaxis().set_visible(False)
+            axarr[1,1].get_yaxis().set_visible(False)
+            axarr[1,1].set_title(f"Uniform image, ssim: {uniform_results[0][-1]:.2f} psnr:{uniform_results[1][-1]:.2f}")
+
+            axarr[2,0].imshow(real_image)
+            axarr[2,0].get_xaxis().set_visible(False)
+            axarr[2,0].get_yaxis().set_visible(False)
+            axarr[2,0].set_title(f"Data image")
+            
+            axarr[2,1].get_xaxis().set_visible(False)
+            axarr[2,1].get_yaxis().set_visible(False)
+            plt.show()
+
+        ssims = (sum(gaussian_results[0])/len(gaussian_results[0]),sum(median_results[0])/len(median_results[0]),sum(uniform_results[0])/len(uniform_results[0]))
+        psnrs =  (sum(gaussian_results[1])/len(gaussian_results[1]),sum(median_results[1])/len(median_results[1]),sum(uniform_results[1])/len(uniform_results[1]))
+    return (ssims, psnrs)
+        
+
+
+def test_all_ssim_psnr():
+    test_sigma = [1.0,2.0,3.0,5.0,6.0,7.0,8.0]
+    test_kernel = [3,5, 7, 11, 13, 17, 19, 23]
+    g_result_ssim = [0,0,0,0,0,0,0,0]
+    g_result_psnr = [0,0,0,0,0,0,0,0]
+    m_result_ssim = [0,0,0,0,0,0,0,0]
+    m_result_psnr = [0,0,0,0,0,0,0,0]
+    u_result_ssim = [0,0,0,0,0,0,0,0]
+    u_result_psnr = [0,0,0,0,0,0,0,0]
+    for i,(kernel, sigma) in enumerate(zip(test_kernel, test_sigma)):
+        ((ssim_gaussian, ssim_median, ssim_uniform),(psnr_gaussian, psnr_median, psnr_uniform)) = test_ssim_psnr(sigma_value=sigma, kernel_size=kernel,plot=False)
+        print(f"Ssim gaussian: {ssim_gaussian},Ssim median: {ssim_median},Ssim uniform: {ssim_uniform}")
+        print(f"psnr gaussian: {psnr_gaussian},psnr median: {psnr_median},psnr uniform: {psnr_uniform}")
+        g_result_ssim[i] = ssim_gaussian
+        g_result_psnr[i] = psnr_gaussian
+        m_result_ssim[i] = ssim_median
+        m_result_psnr[i] = psnr_median
+        u_result_ssim[i] = ssim_uniform
+        u_result_psnr[i] = psnr_uniform
+
+    plt.plot(test_sigma, g_result_ssim)
+    plt.plot(test_sigma, g_result_psnr)
+    plt.show()
+
+    plt.plot(test_kernel, m_result_ssim)
+    plt.plot(test_kernel, m_result_psnr)
+    plt.plot(test_kernel, u_result_ssim)
+    plt.plot(test_kernel, u_result_psnr)
+    plt.show()
+
 if __name__ == '__main__':
-    interesting_images = ["qsd1_w3/00004.jpg","qsd1_w3/00016.jpg", "qsd1_w3/00006.jpg", "qsd1_w3/00017.jpg", "qsd1_w3/00018.jpg", "qsd1_w3/00027.jpg", "qsd1_w3/00028.jpg"] #textures, noise and some times even median is wrong
+    interesting_images = ["qsd1_w3/00000.jpg","qsd1_w3/00004.jpg","qsd1_w3/00016.jpg", "qsd1_w3/00006.jpg", "qsd1_w3/00017.jpg", "qsd1_w3/00018.jpg", "qsd1_w3/00027.jpg", "qsd1_w3/00028.jpg"] #textures, noise and some times even median is wrong
     output_folder = "denoised/"
     results_folder = "data/week2/results"
-    compare_all_method()
+
+    compare_all_method(interesting_images)
+    
+
     #test_kernel("Uniform")
     #test_sigma()
     # Get the list of all files and directories
