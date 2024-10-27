@@ -46,7 +46,7 @@ def predict_command(args):
             for i, (query_input, score_list) in enumerate(image_result):
                 result_names = [s[0] for s in score_list]
                 paitings_output_result.append([image_name_to_id(name) for name in result_names])
-                # print(f"{query_input[0]} ==> {result_names} | Performance(AP@K): {str(apk_list[j+i])}")
+                print(f"{query_input[0]} ==> {result_names} | Performance(AP@K): {str(apk_list[j+i])}")
                 plotting_results.append((query_input, score_list, apk_list[j+i]))
             output_result.append(paitings_output_result)
         print(f"Performance score (MAP@K): {score}")

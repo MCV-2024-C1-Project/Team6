@@ -91,6 +91,13 @@ def edge_detection(image, sigma=1.5, threshold=55):
     for i in range(3):
         edges[:,:,i] = feature.canny(image[:,:,i], sigma=sigma, high_threshold=threshold, low_threshold=threshold*0.5)
     result = np.max(edges, axis=2)>0
+    # _, ax = plt.subplots(1, 2)
+    # ax[0].imshow(image)
+    # ax[0].axis('off')
+    # ax[1].imshow(result)
+    # ax[1].axis('off')
+    # plt.axis('off')
+    # plt.show()
     return result
 
 def frame_filling(image, edges, line_gap=0.01, threshold=0.1):
@@ -100,10 +107,6 @@ def frame_filling(image, edges, line_gap=0.01, threshold=0.1):
     insides = sp.ndimage.binary_fill_holes(edges_d)
     insides = sp.ndimage.binary_erosion(insides, iterations=line_gap_it)
     insides = sp.ndimage.binary_opening(insides, iterations=line_gap_it+2)
-    # _, ax = plt.subplots(1, 2)
-    # ax[0].imshow(image)
-    # ax[1].imshow(insides)
-    # plt.show()
     insides = sp.ndimage.binary_propagation(sp.ndimage.binary_erosion(insides, iterations=segment_threshold), mask=insides)
     return insides
 
@@ -112,6 +115,12 @@ def frame_segmenter(image):
     frames = frame_filling(image, edges)
     labeled_array, num_features = sp.ndimage.label(frames)
     labeled_array = reorder_labels(labeled_array)
+    # _, ax = plt.subplots(1, 2)
+    # ax[0].imshow(image)
+    # ax[0].axis('off')
+    # ax[1].imshow(labeled_array)
+    # ax[1].axis('off')
+    # plt.show()
     return labeled_array, num_features
 
 def get_best_quad_fit(region):
@@ -127,6 +136,11 @@ def get_best_quad_fit(region):
 def extract_frame(image, region):
     region2 = convex_hull_image(region)
     quad = get_best_quad_fit(region2)
+    # plt.imshow(image)
+    # # plt.imshow(region, cmap='gray', alpha=0.5)
+    # plt.scatter(*zip(*quad), color='red', marker='o')
+    # plt.axis('off')
+    # plt.show()
     return extract_and_rectify_region(image, quad), region2
 
 def frame_detector(image, return_mask=False):
@@ -178,10 +192,6 @@ def test_background_removal(input_folder,output_folder,plot = False, save=False,
             image = imageio.imread(image_path)
             gt_mask = imageio.imread(image_path[:-4] + ".png")
             pred_mask, frames = frame_detector(image, return_mask=True)
-            # _, ax = plt.subplots(1, 2)
-            # ax[0].imshow(image)
-            # ax[1].imshow(pred_mask)
-            # plt.show()
             metric = evaluate(gt_mask, pred_mask)
             metrics.append(metric)
             if(plot):
@@ -222,4 +232,4 @@ if __name__ == '__main__':
     dataset_folder = "data/week3/qsd2_w3"
     output_folder = "data/week3/plots"
     results_folder = "data/week3/results"
-    test_background_removal(dataset_folder, results_folder, plot=True, save=False)
+    test_background_removal(dataset_folder, results_folder, plot=False, save=False)

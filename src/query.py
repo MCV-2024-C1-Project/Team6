@@ -36,9 +36,12 @@ def prediction(input_path, db_path, k, descriptor_type, descriptor_subtype, num_
             list_image = frame_detector(raw_image, False) # now crop image may generate more than one , ideally starting a top left and ending a bottom right
             # print(raw_image.dtype, np.max(raw_image))
             # print(list_image[0].dtype, np.max(list_image[0]))
-            # _, ax = plt.subplots(1,2)
+            # _, ax = plt.subplots(1,len(list_image)+1)
             # ax[0].imshow(raw_image)
-            # ax[1].imshow(list_image[0])
+            # ax[0].axis('off')
+            # for i in range(len(list_image)):
+            #     ax[i+1].imshow(list_image[i])
+            #     ax[i+1].axis('off')
             # plt.show()
         else:
             list_image = [raw_image]
