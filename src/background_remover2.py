@@ -129,16 +129,18 @@ def extract_frame(image, region):
     quad = get_best_quad_fit(region2)
     return extract_and_rectify_region(image, quad), region2
 
-def frame_detector(image):
+def frame_detector(image, return_mask=False):
     image_f = denoise(image)
     segments, num_features = frame_segmenter(image_f)
     result_mask = np.zeros_like(segments)
     result_frames = []
     for i in range(num_features):
-        frame, final_mask = extract_frame(image_f, (segments==(i+1)))
+        frame, final_mask = extract_frame(image, (segments==(i+1)))
         result_mask |= final_mask
         result_frames.append(frame)
-    return result_mask, result_frames
+    if return_mask:
+        return result_mask, result_frames
+    return result_frames
 
 def evaluate(gt_mask,pred_mask,verbose = False):
     gt_mask_binary = (gt_mask > 0).astype('uint8')
@@ -175,7 +177,7 @@ def test_background_removal(input_folder,output_folder,plot = False, save=False,
             print(i)
             image = imageio.imread(image_path)
             gt_mask = imageio.imread(image_path[:-4] + ".png")
-            pred_mask, frames = frame_detector(image)
+            pred_mask, frames = frame_detector(image, return_mask=True)
             # _, ax = plt.subplots(1, 2)
             # ax[0].imshow(image)
             # ax[1].imshow(pred_mask)
