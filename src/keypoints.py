@@ -53,6 +53,7 @@ class HarrisCornerDetector(KeypointDetector):
 # https://www.researchgate.net/publication/235355151_Scale_Invariant_Feature_Transform
 class SIFTDetector(KeypointDetector):
     def detect_keypoints(self, image):
+        image = resize_image(image, target_height=500)
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
         sift = cv2.SIFT_create()
 
@@ -74,31 +75,29 @@ if __name__ == "__main__":
     # Load the input image
     image = iio.imread('target/BBDD/bbdd_00003.jpg')
     
-    # Resize the image
-    resized_image = resize_image(image, target_height=500)
     
     # Choose the detector
     detector = KeypointDetectorFactory("SIFT")
 
     # Detect keypoints
     if isinstance(detector, SIFTDetector):
-        keypoints, descriptors = detector.detect_keypoints(resized_image)
+        keypoints, descriptors = detector.detect_keypoints(image)
         print(f"Number of SIFT keypoints detected: {len(keypoints)}")
         print(f"SIFT Descriptors shape: {descriptors.shape}")
     else:
-        keypoints = detector.detect_keypoints(resized_image)
+        keypoints = detector.detect_keypoints(image)
         descriptors = None
         print(f"Number of Harris keypoints detected: {len(keypoints)}")
 
     # Visualization
     dot_size = 2
-    image_copy = resized_image.copy()
+    image_copy = image.copy()
     for (x, y) in keypoints:
         cv2.circle(image_copy, (y, x), dot_size, (0, 0, 255), dot_size)
     
     plt.subplot(1, 2, 1)
     plt.title("Original Image (Resized)")
-    plt.imshow(cv2.cvtColor(resized_image, cv2.COLOR_BGR2RGB))
+    plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
     plt.subplot(1, 2, 2)
     plt.title(f"Detected Keypoints (Count: {len(keypoints)})")
     plt.imshow(cv2.cvtColor(image_copy, cv2.COLOR_BGR2RGB))
