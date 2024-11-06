@@ -7,6 +7,7 @@ import numpy as np
 import pickle
 from tqdm import tqdm
 
+from src.keypoints import KeypointDetectorFactory
 from src.histogram import HistogramExtractorFactory
 from src.texture import TextureExtractorFactory
 
@@ -20,6 +21,10 @@ def compute_descriptor(image, dtype, dsubtype, num_bins=256):
         texture_type = dsubtype
         texture_extractor = TextureExtractorFactory(type_str = texture_type, histogram_bins = num_bins)
         return texture_extractor.extract(image)
+    elif dtype == "LocalFeat":
+        point_detection, local_feat = dsubtype.split("|")
+        localfeat_extractor = LocalFeatureExtractorFactory(type = local_feat, keypoint = point_detection)
+        return localfeat_extractor.extract(image)
     else:
         sys.exit("Not yet implemented")
 

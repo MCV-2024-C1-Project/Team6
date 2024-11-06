@@ -54,11 +54,14 @@ def compute_performance(result, ground_truth_path, debug=False):
     for image_result in result:
         image_result_bbdd_id = []
         for (_,_), painting_result_lk in image_result:
-            lk_painting_bbdd_id = []
-            for (path_result,_,_,_) in painting_result_lk:
-                bbdd_id = get_image_id(os.path.basename(os.path.abspath(path_result)))
-                lk_painting_bbdd_id.append(bbdd_id)
-            image_result_bbdd_id.append(lk_painting_bbdd_id)
+            if len(painting_result_lk) == 1 and painting_result_lk[0][0] == "-1" and painting_result_lk[0][1] == np.inf:
+                image_result_bbdd_id.append([-1])
+            else:
+                lk_painting_bbdd_id = []
+                for (path_result,_,_,_) in painting_result_lk:
+                    bbdd_id = get_image_id(os.path.basename(os.path.abspath(path_result)))
+                    lk_painting_bbdd_id.append(bbdd_id)
+                image_result_bbdd_id.append(lk_painting_bbdd_id)
 
         query_result_bbdd_id.append(image_result_bbdd_id)
 
@@ -67,6 +70,10 @@ def compute_performance(result, ground_truth_path, debug=False):
     list_apk = []
     mean_apk = 0
     total_paiting_query = 0
+    TP = 0
+    TN = 0
+    FN = 0
+    FP = 0
     for i_image, gt_image in enumerate(gt_list):
         for i_painting, gt_painting in enumerate(gt_image):
             total_paiting_query += 1
@@ -74,6 +81,17 @@ def compute_performance(result, ground_truth_path, debug=False):
                 print(f"We predicted {str(len(query_result_bbdd_id[i_image]))} paintings for image {str(i_image)}, however the gt says they are {str(len(gt_image))} paintings")
                 continue
             apk = compute_APK(gt_painting, query_result_bbdd_id[i_image][i_painting])
+            if -1 in gt_painting:
+                if len(query_result_bbdd_id[i_image][i_painting]) == 1 and query_result_bbdd_id[i_image][i_painting][0] == -1:
+                    TN += 1
+                else:
+                    FP += 1
+            else:
+                if len(query_result_bbdd_id[i_image][i_painting]) == 1 and query_result_bbdd_id[i_image][i_painting][0] == -1:
+                    FN += 1
+                else:
+                    TP += 1
+
             list_apk.append(apk)
             mean_apk = mean_apk + apk
             if debug:
@@ -82,5 +100,8 @@ def compute_performance(result, ground_truth_path, debug=False):
                 print("-----------")
             #####
     mean_apk = np.divide(mean_apk, total_paiting_query) if total_paiting_query > 0 else 0
+    if debug:
+        print(f"TP:{TP}, FN:{FN}, FP:{FP}")
+        print(f"F1_Score:{2*TP/(2*TP+FP+FN)}")
 
     return mean_apk, list_apk

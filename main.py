@@ -83,15 +83,15 @@ if __name__ == '__main__':
     # Subparser for the 'init' command
     init_parser = subparsers.add_parser('init', help='Initialize the database')
     init_parser.add_argument('--db_path', required=False, default="BBDD/", help='Path to the database')
-    init_parser.add_argument('--descriptor-type', required=False, default="Histogram-RGB-256", help='Descriptor type to be used, in the format "histogram-color-bins"')
+    init_parser.add_argument('--descriptor-type', required=False, default="LocalFeat-HarrisCorner_2_3_0.04_0.01|Sift-64", help='Descriptor type to be used, in the format "histogram-color-bins"')
     init_parser.set_defaults(func=init_command)
 
     # Subparser for the 'predict' command
     predict_parser = subparsers.add_parser('predict', help='Predict results for a single image')
     predict_parser.add_argument('--input', required=False, default="qsd1_w1/", help='Input image or folder')
     predict_parser.add_argument('--result-number', required=False, default=1, help='Number of results to return, aka K')
-    predict_parser.add_argument('--descriptor-type', required=False, default="Histogram-Pyramid_4_Super-64", help='Descriptor type to be used, in the format "histogram-color-bins"')
-    predict_parser.add_argument('--measure', required=False, default="L1-Median", help='Measure function to be used for similarity ranking')
+    predict_parser.add_argument('--descriptor-type', required=False, default="LocalFeat-HarrisCorner_2_3_0.04_0.01|Sift-64", help='Descriptor type to be used, in the format "histogram-color-bins"')
+    predict_parser.add_argument('--measure', required=False, default="L2", help='Measure function to be used for similarity ranking')
     predict_parser.add_argument('--plot', action='store_true', help='If set, show result plots')
     predict_parser.add_argument('--evaluate', action='store_true', help='If set, perform evaluation using ground truth')
     predict_parser.add_argument('--save-output', action='store_true', help='If set, save the prediction results to a CSV file')
