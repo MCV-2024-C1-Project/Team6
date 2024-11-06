@@ -16,32 +16,33 @@ from src.denoising import noise_removal
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-def compare_localfeats(vector_local_feat, db_image_descriptor, score_sys, point_threshold=np.inf, alpha=0.5):
+def compare_localfeats(vector_local_feat, db_image_descriptor, score_sys, point_threshold=np.inf, rate_treshold=-1, alpha=0.5):
    
     measure = MeasureFactory(measure)
-    result = [None for x in range(len(vector_local_feat))]
+    result = np.array([None for x in range(len(vector_local_feat))])
     # bf = cv2.BFMatcher()
     # matches = bf.knnMatch(vector_local_feat,des2,k=2)
+    
     for i, localfeat_point in enumerate(vector_local_feat):
-        min_dist = (-1, -1)
+        dist_point_vector = []
         for j, localfeat_point_db in enumerate(db_image_descriptor)
             dist = measure(localfeat_point, localfeat_point_db)
-            if min_dist[0] < 0 or dist < min_dist[0]:
-                min_dist = (dist, j)
-        if not(min_dist[0] > point_threshold):
-            result[i] = min_dist
-
-    valid_distances = [x[1] for x in result if not(x is None)]
+            dist_point_vector.append((dist, j))
+        dist_point_vector = sorted(dist_point_vector, key=lambda x: x[0])
+        if dist_point_vector[0][0] <= point_threshold and abs(dist_point_vector[0][0]-dist_point_vector[1][0]) > rate_treshold
+            result[i] = dist_point_vector[0]
+    
+    valid_distances = np.array([x[0] for x in result if not(x is None)])
+    if len(valid_distances) == 0:
+        return np.inf
     if score_sys == "match":
-        match_rate = 1.0 - len(valid_distances)/len(result) #number_matches/total_points
-        return match_rate
+        return 1.0 - len(valid_distances)/len(result)#number_matches/total_points
     elif score_sys == "avg":
-        average_dist = sum(valid_distances)/len(valid_distances) if len(valid_distances) > 0 else np.inf
-        return average_dist
+        return sum(valid_distances)/len(valid_distances)
     elif score_sys == "weighted":
         match_rate = 1.0 - len(valid_distances)/len(result)
         average_dist = sum(valid_distances)/len(valid_distances)
-        return average_dist*match_rate if len(valid_distances) > 0 else np.inf
+        return average_dist*match_rate
     else:
         sys.exit("ERROR: Invalid method for computing whole distance for a local feature")
     #TODO: maybe ensure one unique asigment for each point?
@@ -54,20 +55,14 @@ def retrieve_K_localfeat(descriptor, db_descriptor, measure, k, type_local_feat=
     result = []
     #descriptor is a vector of local features, one for each keypoint detected
     for path, db_image_descriptor in db_descriptor:
-        distraw, dist = compare_localfeats(descriptor, db_image_descriptor, score_sys)
-        result.append((path, dist, db_image_descriptor, distraw))
+        dist = compare_localfeats(descriptor, db_image_descriptor, score_sys)
+        result.append((path, dist, db_image_descriptor, []))
 
     result = sorted(result, key=lambda x: x[1])
-    if non_existent_behavior:
-        if score_sys == "match":
-        _, dist, _, _ = result[0]
-            if dist > threshold:
-                result = [("-1", np.inf, [], [])]
-        else:
-            _, dist1, _, _ = result[0]
-            _, dist2, _, _ = result[1]
-            if (dist1 == np.inf) or (abs(dist1-dist2) > treshold):
-                result = [("-1", np.inf, [], [])]
+    result = [x for x in result if not(x[1] == np.inf)]
+    if len(result) == 0 :
+        #if all the db images have a distance of inf
+        return [("-1", np.inf, [], [])]
     
     return result[:k] 
 
