@@ -3,26 +3,68 @@ from matplotlib import pyplot as plt
 import numpy as np
 import imageio.v3 as iio
 import sys
+from typing import Tuple, List
 
-def KeypointDetectorFactory(type_str: str):
+def LocalFeatureExtractorFactory(type_str: str):
     parts = type_str.split('_')
     class_name = parts[0]
     
-    if class_name == "HarrisCorner":
-        # HarrisCornerDetector_blockSize_ksize_k_threshold
-        block_size = int(parts[1]) if len(parts) > 1 else 2
-        ksize = int(parts[2]) if len(parts) > 2 else 3
-        k = float(parts[3]) if len(parts) > 3 else 0.04
-        threshold = float(parts[4]) if len(parts) > 4 else 0.01
-        return HarrisCornerDetector(block_size, ksize, k, threshold)
-    elif class_name == "SIFT":
+    if class_name == "SIFT":
         #no parameters
-        return SIFTDetector()
+        return SIFT()
+    elif class_name == "ORB":
+        return ORB()
     else:
         sys.exit(f"ERROR: Unknown keypoint detector type '{type_str}'")
+    # class_name == "HarrisCorner":
+    #     # HarrisCornerDetector_blockSize_ksize_k_threshold
+    #     block_size = int(parts[1]) if len(parts) > 1 else 2
+    #     ksize = int(parts[2]) if len(parts) > 2 else 3
+    #     k = float(parts[3]) if len(parts) > 3 else 0.04
+    #     threshold = float(parts[4]) if len(parts) > 4 else 0.01
+    #     return HarrisCornerDetector(block_size, ksize, k, threshold)
+
+
 
 class KeypointDetector(object):
-    def detect_keypoints(self, image):
+    def detect_keypoints(self, image) -> List:
+        """
+        Detects keypoints for the given image.
+
+        Args:
+            image: The input image to process.
+
+        Returns:
+            keypoints (List): A list of detected keypoints.
+        """
+        raise NotImplementedError("ERROR: detect_keypoints should be implemented by a subclass")
+    
+class LocalDescriptor(object):
+    def compute_descriptor(self, image, keypoints) -> List:
+        """
+        Detects keypoints for the given image.
+
+        Args:
+            image: The input image to process.
+            keypoints: A list of detected keypoints.
+
+        Returns:
+            descriptors (List): A list of corresponding descriptors.
+        """
+        raise NotImplementedError("ERROR: detect_keypoints should be implemented by a subclass")
+class KeypointAndDescriptorExtractor(object):
+    def extract(self, image) -> Tuple[List, List]:
+        """
+        Detects keypoints and computes descriptors for the given image.
+
+        Args:
+            image: The input image to process.
+
+        Returns:
+            Tuple[List, List]: A tuple containing two lists:
+                - keypoints (List): A list of detected keypoints.
+                - descriptors (List): A list of corresponding descriptors.
+        """
         raise NotImplementedError("ERROR: detect_keypoints should be implemented by a subclass")
 
 # blockSize - It is the size of neighbourhood considered for corner detection
@@ -51,19 +93,31 @@ class HarrisCornerDetector(KeypointDetector):
 
 
 # https://www.researchgate.net/publication/235355151_Scale_Invariant_Feature_Transform
-class SIFTDetector(KeypointDetector):
-    def detect_keypoints(self, image):
+class SIFT(KeypointAndDescriptorExtractor):
+    def extract(self, image):
         image = resize_image(image, target_height=500)
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
         sift = cv2.SIFT_create()
 
         keypoints, descriptors = sift.detectAndCompute(gray_image, None)
-        keypoint_coords = [(int(kp.pt[1]), int(kp.pt[0])) for kp in keypoints]
+        # keypoint_coords = [(int(kp.pt[1]), int(kp.pt[0])) for kp in keypoints]
         
-        return keypoint_coords, descriptors
+        return keypoints, descriptors
+    
+class ORB(KeypointAndDescriptorExtractor):
+    def extract(self, image):
+        image = resize_image(image, target_height=512)
+        print(image.shape)
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+        orb = cv2.ORB_create()
+
+        keypoints, descriptors = orb.detectAndCompute(gray_image, None)
+        # keypoint_coords = [(int(kp.pt[1]), int(kp.pt[0])) for kp in keypoints]
+        
+        return keypoints, descriptors
 
 
-def resize_image(image, target_height=500):
+def resize_image(image, target_height=512):
     height, width = image.shape[:2]
     scaling_factor = target_height / float(height)
     new_size = (int(width * scaling_factor), target_height)
@@ -73,32 +127,37 @@ def resize_image(image, target_height=500):
 
 if __name__ == "__main__":
     # Load the input image
-    image = iio.imread('target/BBDD/bbdd_00003.jpg')
+    image = iio.imread('../W4/qsd1_w4/00025.jpg')
     
     
     # Choose the detector
-    detector = KeypointDetectorFactory("SIFT")
+    locafeat = LocalFeatureExtractorFactory("ORB")
+    keypoints, descriptors = locafeat.extract(image)
+    # print(keypoints)
+    disp_img = resize_image(image, target_height=512)
+    disp_img = cv2.drawKeypoints(disp_img, keypoints, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+    plt.imshow(disp_img), plt.show()
 
     # Detect keypoints
-    if isinstance(detector, SIFTDetector):
-        keypoints, descriptors = detector.detect_keypoints(image)
-        print(f"Number of SIFT keypoints detected: {len(keypoints)}")
-        print(f"SIFT Descriptors shape: {descriptors.shape}")
-    else:
-        keypoints = detector.detect_keypoints(image)
-        descriptors = None
-        print(f"Number of Harris keypoints detected: {len(keypoints)}")
+    # if isinstance(locafeat, SIFT):
+    #     keypoints, descriptors = locafeat.extract(image)
+    #     print(f"Number of SIFT keypoints detected: {len(keypoints)}")
+    #     print(f"SIFT Descriptors shape: {descriptors.shape}")
+    # else:
+    #     keypoints = detector.detect_keypoints(image)
+    #     descriptors = None
+    #     print(f"Number of Harris keypoints detected: {len(keypoints)}")
 
-    # Visualization
-    dot_size = 2
-    image_copy = image.copy()
-    for (x, y) in keypoints:
-        cv2.circle(image_copy, (y, x), dot_size, (0, 0, 255), dot_size)
+    # # Visualization
+    # dot_size = 2
+    # image_copy = image.copy()
+    # for (x, y) in keypoints:
+    #     cv2.circle(image_copy, (y, x), dot_size, (0, 0, 255), dot_size)
     
-    plt.subplot(1, 2, 1)
-    plt.title("Original Image (Resized)")
-    plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-    plt.subplot(1, 2, 2)
-    plt.title(f"Detected Keypoints (Count: {len(keypoints)})")
-    plt.imshow(cv2.cvtColor(image_copy, cv2.COLOR_BGR2RGB))
-    plt.show()
+    # plt.subplot(1, 2, 1)
+    # plt.title("Original Image (Resized)")
+    # plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+    # plt.subplot(1, 2, 2)
+    # plt.title(f"Detected Keypoints (Count: {len(keypoints)})")
+    # plt.imshow(cv2.cvtColor(image_copy, cv2.COLOR_BGR2RGB))
+    # plt.show()

@@ -7,7 +7,7 @@ import numpy as np
 import pickle
 from tqdm import tqdm
 
-from src.keypoints import KeypointDetectorFactory
+from src.keypoints import LocalFeatureExtractorFactory
 from src.histogram import HistogramExtractorFactory
 from src.texture import TextureExtractorFactory
 
