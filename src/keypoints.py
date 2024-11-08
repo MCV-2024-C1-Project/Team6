@@ -5,6 +5,8 @@ import imageio.v3 as iio
 import sys
 from typing import Tuple, List
 
+from sklearn.decomposition import PCA
+
 def LocalFeatureExtractorFactory(type_str: str):
     parts = type_str.split('_')
     class_name = parts[0]
@@ -14,6 +16,10 @@ def LocalFeatureExtractorFactory(type_str: str):
         return SIFT()
     elif class_name == "ORB":
         return ORB()
+    elif class_name == "PCASIFT":
+        # PCASIFT_nComponents
+        n_components = int(parts[1]) if len(parts) > 1 else 64  # Default to 64 components
+        return PCASIFT(n_components)
     else:
         sys.exit(f"ERROR: Unknown keypoint detector type '{type_str}'")
     # class_name == "HarrisCorner":
@@ -90,8 +96,6 @@ class HarrisCornerDetector(KeypointDetector):
         
         return keypoints
 
-
-
 # https://www.researchgate.net/publication/235355151_Scale_Invariant_Feature_Transform
 class SIFT(KeypointAndDescriptorExtractor):
     def extract(self, image):
@@ -103,6 +107,7 @@ class SIFT(KeypointAndDescriptorExtractor):
         # keypoint_coords = [(int(kp.pt[1]), int(kp.pt[0])) for kp in keypoints]
         
         return keypoints, descriptors
+    
     
 class ORB(KeypointAndDescriptorExtractor):
     def extract(self, image):
@@ -116,6 +121,25 @@ class ORB(KeypointAndDescriptorExtractor):
         
         return keypoints, descriptors
 
+# https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=eb14821f5908e614a72ca1e66664582938643d51#:~:text=PCA%2Dbased%20SIFT%20descriptors&text=This%20feature%20vector%20is%20sig,same%20keypoint%20in%20different%20images.
+class PCASIFT(KeypointAndDescriptorExtractor):
+    def __init__(self, n_components=64):
+        self.n_components = n_components
+
+    def extract(self, image):
+        image = resize_image(image, target_height=500)
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+        sift = cv2.SIFT_create()
+        keypoints, descriptors = sift.detectAndCompute(gray_image, None)
+
+        if descriptors is not None:
+            # Apply PCA to reduce the descriptor length
+            pca = PCA(n_components=self.n_components)
+            reduced_descriptors = pca.fit_transform(descriptors)
+        else:
+            reduced_descriptors = None
+
+        return keypoints, reduced_descriptors
 
 def resize_image(image, target_height=512):
     height, width = image.shape[:2]
@@ -127,16 +151,32 @@ def resize_image(image, target_height=512):
 
 if __name__ == "__main__":
     # Load the input image
-    image = iio.imread('../W4/qsd1_w4/00025.jpg')
+    # image = iio.imread('../W4/qsd1_w4/00025.jpg')
+    image = iio.imread('target/qsd1_w1/00027.jpg')
     
     
-    # Choose the detector
-    locafeat = LocalFeatureExtractorFactory("ORB")
-    keypoints, descriptors = locafeat.extract(image)
-    # print(keypoints)
+    # # Choose the detector
+    # locafeat = LocalFeatureExtractorFactory("ORB")
+    # keypoints, descriptors = locafeat.extract(image)
+    # # print(keypoints)
+    # disp_img = resize_image(image, target_height=512)
+    # disp_img = cv2.drawKeypoints(disp_img, keypoints, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+    # plt.imshow(disp_img), plt.show()
+
+    # Load the input image
+
+
+    pcasift = LocalFeatureExtractorFactory("PCASIFT_64")
+    keypoints, descriptors = pcasift.extract(image)
+    print(len(keypoints), descriptors.shape)
+
+
+    # Visualize the keypoints
     disp_img = resize_image(image, target_height=512)
     disp_img = cv2.drawKeypoints(disp_img, keypoints, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-    plt.imshow(disp_img), plt.show()
+    plt.imshow(disp_img)
+    plt.title(f"Detected Keypoints: {len(keypoints)}")
+    plt.show()
 
     # Detect keypoints
     # if isinstance(locafeat, SIFT):
