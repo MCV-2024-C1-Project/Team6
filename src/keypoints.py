@@ -18,17 +18,10 @@ def LocalFeatureExtractorFactory(type_str: str):
         return ORB()
     elif class_name == "PCASIFT":
         # PCASIFT_nComponents
-        n_components = int(parts[1]) if len(parts) > 1 else 64  # Default to 64 components
+        n_components = int(parts[1]) if len(parts) > 1 else 64
         return PCASIFT(n_components)
     else:
         sys.exit(f"ERROR: Unknown keypoint detector type '{type_str}'")
-    # class_name == "HarrisCorner":
-    #     # HarrisCornerDetector_blockSize_ksize_k_threshold
-    #     block_size = int(parts[1]) if len(parts) > 1 else 2
-    #     ksize = int(parts[2]) if len(parts) > 2 else 3
-    #     k = float(parts[3]) if len(parts) > 3 else 0.04
-    #     threshold = float(parts[4]) if len(parts) > 4 else 0.01
-    #     return HarrisCornerDetector(block_size, ksize, k, threshold)
 
 
 
@@ -89,7 +82,6 @@ class HarrisCornerDetector(KeypointDetector):
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
         
         harris_corners = cv2.cornerHarris(gray_image, blockSize=self.block_size, ksize=self.ksize, k=self.k)
-        # harris_corners = cv2.dilate(harris_corners, None)
         
         threshold = self.threshold * harris_corners.max()
         keypoints = np.argwhere(harris_corners > threshold)
@@ -99,25 +91,23 @@ class HarrisCornerDetector(KeypointDetector):
 # https://www.researchgate.net/publication/235355151_Scale_Invariant_Feature_Transform
 class SIFT(KeypointAndDescriptorExtractor):
     def extract(self, image):
-        image = resize_image(image, target_height=500)
+        image = resize_image(image)
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
         sift = cv2.SIFT_create()
 
         keypoints, descriptors = sift.detectAndCompute(gray_image, None)
-        # keypoint_coords = [(int(kp.pt[1]), int(kp.pt[0])) for kp in keypoints]
         
         return keypoints, descriptors
     
     
 class ORB(KeypointAndDescriptorExtractor):
     def extract(self, image):
-        image = resize_image(image, target_height=512)
+        image = resize_image(image)
         print(image.shape)
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
         orb = cv2.ORB_create()
 
         keypoints, descriptors = orb.detectAndCompute(gray_image, None)
-        # keypoint_coords = [(int(kp.pt[1]), int(kp.pt[0])) for kp in keypoints]
         
         return keypoints, descriptors
 
@@ -127,7 +117,7 @@ class PCASIFT(KeypointAndDescriptorExtractor):
         self.n_components = n_components
 
     def extract(self, image):
-        image = resize_image(image, target_height=500)
+        image = resize_image(image)
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
         sift = cv2.SIFT_create()
         keypoints, descriptors = sift.detectAndCompute(gray_image, None)
@@ -159,45 +149,20 @@ if __name__ == "__main__":
     # locafeat = LocalFeatureExtractorFactory("ORB")
     # keypoints, descriptors = locafeat.extract(image)
     # # print(keypoints)
-    # disp_img = resize_image(image, target_height=512)
+    # disp_img = resize_image(image)
     # disp_img = cv2.drawKeypoints(disp_img, keypoints, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
     # plt.imshow(disp_img), plt.show()
 
     # Load the input image
 
 
-    pcasift = LocalFeatureExtractorFactory("PCASIFT_64")
-    keypoints, descriptors = pcasift.extract(image)
-    print(len(keypoints), descriptors.shape)
+    # pcasift = LocalFeatureExtractorFactory("PCASIFT_64")
+    # keypoints, descriptors = pcasift.extract(image)
+    # print(len(keypoints), descriptors.shape)
 
 
-    # Visualize the keypoints
-    disp_img = resize_image(image, target_height=512)
-    disp_img = cv2.drawKeypoints(disp_img, keypoints, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-    plt.imshow(disp_img)
-    plt.title(f"Detected Keypoints: {len(keypoints)}")
-    plt.show()
-
-    # Detect keypoints
-    # if isinstance(locafeat, SIFT):
-    #     keypoints, descriptors = locafeat.extract(image)
-    #     print(f"Number of SIFT keypoints detected: {len(keypoints)}")
-    #     print(f"SIFT Descriptors shape: {descriptors.shape}")
-    # else:
-    #     keypoints = detector.detect_keypoints(image)
-    #     descriptors = None
-    #     print(f"Number of Harris keypoints detected: {len(keypoints)}")
-
-    # # Visualization
-    # dot_size = 2
-    # image_copy = image.copy()
-    # for (x, y) in keypoints:
-    #     cv2.circle(image_copy, (y, x), dot_size, (0, 0, 255), dot_size)
-    
-    # plt.subplot(1, 2, 1)
-    # plt.title("Original Image (Resized)")
-    # plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-    # plt.subplot(1, 2, 2)
-    # plt.title(f"Detected Keypoints (Count: {len(keypoints)})")
-    # plt.imshow(cv2.cvtColor(image_copy, cv2.COLOR_BGR2RGB))
+    # disp_img = resize_image(image)
+    # disp_img = cv2.drawKeypoints(disp_img, keypoints, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+    # plt.imshow(disp_img)
+    # plt.title(f"Detected Keypoints: {len(keypoints)}")
     # plt.show()
