@@ -12,12 +12,10 @@ def LocalFeatureExtractorFactory(type_str: str):
     class_name = parts[0]
     
     if class_name == "SIFT":
-        if len(parts) > 1:
-            nfeatures, nOctaveLayers, contrastThreshold, edgeThreshold, sigma = parts[1:]
-            #no parameters
-            return SIFT(nfeatures, nOctaveLayers, contrastThreshold, edgeThreshold, sigma)
-        else:
-            return SIFT()
+        # SIFT_response_octave, e.g.
+        response_threshold = float(parts[1]) if len(parts) > 1 else 0.6
+        octave_threshold = int(parts[2]) if len(parts) > 2 else 2
+        return SIFT(response_threshold, octave_threshold)
     elif class_name == "ORB":
         if len(parts) > 1:
             nfeatures, WTA_K, fastThreshold = parts[1:]
@@ -26,9 +24,11 @@ def LocalFeatureExtractorFactory(type_str: str):
         else:
             return ORB()
     elif class_name == "PCASIFT":
-        # PCASIFT_nComponents
+        # PCASIFT_nComponents_response_octave
         n_components = int(parts[1]) if len(parts) > 1 else 64
-        return PCASIFT(n_components)
+        response_threshold = float(parts[2]) if len(parts) > 2 else 0.6
+        octave_threshold = int(parts[3]) if len(parts) > 3 else 2
+        return PCASIFT(n_components, response_threshold, octave_threshold)
     else:
         sys.exit(f"ERROR: Unknown keypoint detector type '{type_str}'")
 
@@ -99,19 +99,25 @@ class HarrisCornerDetector(KeypointDetector):
 
 # https://www.researchgate.net/publication/235355151_Scale_Invariant_Feature_Transform
 class SIFT(KeypointAndDescriptorExtractor):
-    def __init__(self, nfeatures=0, nOctaveLayers=3, contrastThreshold=0.04, edgeThreshold=10, sigma=1.6):
-        self.sift = cv2.SIFT_create(
-            nfeatures=nfeatures,           # whether we want to find a fixed number of keypoints
-            nOctaveLayers=nOctaveLayers,         # Use 4 layers per octave
-            contrastThreshold=contrastThreshold,  # Lower threshold to retain low-contrast features
-            edgeThreshold=edgeThreshold,         # Decrease to reduce edge-like features
-            sigma=sigma                # Reduce initial sigma for finer features
-        )
     def extract(self, image):
         image = resize_image(image)
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
-        keypoints, descriptors = self.sift.detectAndCompute(gray_image, None)
-        return descriptors
+        sift = cv2.SIFT_create()
+        keypoints, descriptors = sift.detectAndCompute(gray_image, None)
+
+        if not keypoints:
+            return [], None
+
+        max_response = max(kp.response for kp in keypoints)
+        filtered_keypoints = [
+            kp for kp in keypoints
+            if kp.response >= self.response_threshold * max_response and kp.octave >= self.octave_threshold
+        ]
+        filtered_descriptors = descriptors[
+            [i for i, kp in enumerate(keypoints) if kp in filtered_keypoints]
+        ] if descriptors is not None else None
+
+        return filtered_keypoints, filtered_descriptors
     
     
 class ORB(KeypointAndDescriptorExtractor):
@@ -132,8 +138,10 @@ class ORB(KeypointAndDescriptorExtractor):
 
 # https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=eb14821f5908e614a72ca1e66664582938643d51#:~:text=PCA%2Dbased%20SIFT%20descriptors&text=This%20feature%20vector%20is%20sig,same%20keypoint%20in%20different%20images.
 class PCASIFT(KeypointAndDescriptorExtractor):
-    def __init__(self, n_components=64):
+    def __init__(self, n_components=64, response_threshold=0.6, octave_threshold=2):
         self.n_components = n_components
+        self.response_threshold = response_threshold
+        self.octave_threshold = octave_threshold
 
     def extract(self, image):
         image = resize_image(image)
@@ -141,10 +149,21 @@ class PCASIFT(KeypointAndDescriptorExtractor):
         sift = cv2.SIFT_create()
         keypoints, descriptors = sift.detectAndCompute(gray_image, None)
 
-        if descriptors is not None:
-            # Apply PCA to reduce the descriptor length
+        if not keypoints or descriptors is None:
+            return [], None
+
+        max_response = max(kp.response for kp in keypoints)
+        filtered_keypoints = [
+            kp for kp in keypoints
+            if kp.response >= self.response_threshold * max_response and kp.octave >= self.octave_threshold
+        ]
+        filtered_descriptors = descriptors[
+            [i for i, kp in enumerate(keypoints) if kp in filtered_keypoints]
+        ] if descriptors is not None else None
+
+        if filtered_descriptors is not None:
             pca = PCA(n_components=self.n_components)
-            reduced_descriptors = pca.fit_transform(descriptors)
+            reduced_descriptors = pca.fit_transform(filtered_descriptors)
         else:
             reduced_descriptors = None
 
