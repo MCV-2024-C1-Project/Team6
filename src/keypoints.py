@@ -31,6 +31,12 @@ def LocalFeatureExtractorFactory(type_str: str):
         # octave_threshold = int(parts[3]) if len(parts) > 3 else 2
         # return PCASIFT(n_components, response_threshold, octave_threshold)
         return None
+    elif class_name == "KAZE":
+        if len(parts) > 1:
+            extended, threshold, nOctaves, nOctaveLayers = parts[1:]
+            return KAZE(extended, threshold, nOctaves, nOctaveLayers)
+        else:
+            return KAZE()
     else:
         sys.exit(f"ERROR: Unknown keypoint detector type '{type_str}'")
 
@@ -128,6 +134,23 @@ class ORB(KeypointAndDescriptorExtractor):
         orb = cv2.ORB_create()
 
         keypoints, descriptors = orb.detectAndCompute(gray_image, None)
+        
+        return descriptors
+
+class KAZE(KeypointAndDescriptorExtractor):
+    def __init__(self, extended=False, threshold=0.001, nOctaves=4, nOctaveLayers=4):
+        self.kaze = cv2.KAZE_create(
+            extended=extended,          # Default: False
+            threshold=threshold,        # Default: 0.001
+            nOctaves=nOctaves,          # Default: 4
+            nOctaveLayers=nOctaveLayers # Default: 4
+        )
+    
+    def extract(self, image):
+        image = resize_image(image)
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+
+        keypoints, descriptors = self.kaze.detectAndCompute(gray_image, None)
         
         return descriptors
 
