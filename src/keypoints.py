@@ -35,6 +35,12 @@ def LocalFeatureExtractorFactory(type_str: str):
     elif class_name == "KAZE":
         if len(parts) > 1:
             extended, threshold, nOctaves, nOctaveLayers = parts[1:]
+            
+            if(parts[1] == 1):extended=True
+            else: extended= False
+            threshold = float(parts[2]) if len(parts) > 2 else 0.001
+            nOctaves = int(parts[3]) if len(parts) > 3 else 4
+            nOctaveLayers = int(parts[4]) if len(parts) > 4 else 4
             return KAZE(extended, threshold, nOctaves, nOctaveLayers)
         else:
             return KAZE()
