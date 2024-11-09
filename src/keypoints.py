@@ -99,6 +99,10 @@ class HarrisCornerDetector(KeypointDetector):
 
 # https://www.researchgate.net/publication/235355151_Scale_Invariant_Feature_Transform
 class SIFT(KeypointAndDescriptorExtractor):
+    def __init__(self, response_threshold=0.6, octave_threshold=2):
+        self.response_threshold = response_threshold
+        self.octave_threshold = octave_threshold
+
     def extract(self, image):
         image = resize_image(image)
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
