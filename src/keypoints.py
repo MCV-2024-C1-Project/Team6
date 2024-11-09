@@ -19,8 +19,9 @@ def LocalFeatureExtractorFactory(type_str: str):
         return SIFT(nfeatures, nOctaveLayers, contrastThreshold)
     elif class_name == "ORB":
         if len(parts) > 1:
-            nfeatures, WTA_K, fastThreshold = parts[1:]
-            #no parameters
+            nfeatures = int(parts[1])
+            WTA_K = int(parts[2]) if len(parts) > 2 else 2
+            fastThreshold = int(parts[3]) if len(parts) > 3 else 20
             return ORB(nfeatures, WTA_K, fastThreshold)
         else:
             return ORB()
@@ -123,7 +124,7 @@ class SIFT(KeypointAndDescriptorExtractor):
     
 class ORB(KeypointAndDescriptorExtractor):
     def __init__(self, nfeatures=500, WTA_K=2, fastThreshold=20):
-        self.sift = cv2.ORB_create(
+        self.orb = cv2.ORB_create(
             nfeatures=nfeatures,         # Start from the first pyramid level
             WTA_K=WTA_K,          # Use a larger patch size around keypoints
             fastThreshold=fastThreshold          # Lower threshold to capture more keypoints
@@ -131,9 +132,8 @@ class ORB(KeypointAndDescriptorExtractor):
     def extract(self, image):
         image = resize_image(image)
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
-        orb = cv2.ORB_create()
 
-        keypoints, descriptors = orb.detectAndCompute(gray_image, None)
+        keypoints, descriptors = self.orb.detectAndCompute(gray_image, None)
         
         return descriptors
 
