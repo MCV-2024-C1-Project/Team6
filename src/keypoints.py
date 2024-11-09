@@ -117,7 +117,7 @@ class SIFT(KeypointAndDescriptorExtractor):
             [i for i, kp in enumerate(keypoints) if kp in filtered_keypoints]
         ] if descriptors is not None else None
 
-        return filtered_keypoints, filtered_descriptors
+        return filtered_descriptors
     
     
 class ORB(KeypointAndDescriptorExtractor):
