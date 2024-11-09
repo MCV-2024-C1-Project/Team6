@@ -8,7 +8,7 @@ from src.descriptors import compute_descriptor
 from src.descriptors import get_all_jpg_images
 from src.descriptors import load_descriptors
 from src.measures import MeasureFactory
-from src.measures import LocalFeatMeasureExtractor
+from src.measures import LocalFeatMeasureFactory
 from src.performance import compute_performance
 from src.background_remover import crop_foreground
 from src.background_remover2 import frame_detector
@@ -16,46 +16,50 @@ from src.denoising import noise_removal
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-def compare_localfeats(vector_local_feat, db_image_descriptor, score_sys, point_threshold=np.inf, rate_treshold=-1, alpha=0.5):
-   
-    measure = MeasureFactory(measure)
-    result = np.array([None for x in range(len(vector_local_feat))])
-    # bf = cv2.BFMatcher()
-    # matches = bf.knnMatch(vector_local_feat,des2,k=2)
+def compare_localfeats(vector_local_feat, db_image_descriptor, score_sys, measure, point_threshold=np.inf, lowe_ratio_treshold=0.75):
+    bf = cv2.BFMatcher(measure, crossCheck=False)
+
+    # Perform KNN matching between query descriptors and current database image descriptors
+    if vector_local_feat is None or db_image_descriptor is None:
+        scores = np.inf  # Invalid descriptor, set score to infinity
+        return scores 
+    matches = bf.knnMatch(vector_local_feat, db_image_descriptor, k=2)
+
+    # Apply ratio test to filter good matches
+    good_matches = []
+    for top1, top2 in matches:
+        if top1.distance < lowe_ratio_treshold * top2.distance and top1.distance < point_threshold:
+            good_matches.append(top1)
+
+    # Calculate score based on the scoring system
+    if len(good_matches) == 0:
+        scores = np.inf  # No valid matches, set score to infinity
+        return scores
     
-    for i, localfeat_point in enumerate(vector_local_feat):
-        dist_point_vector = []
-        for j, localfeat_point_db in enumerate(db_image_descriptor)
-            dist = measure(localfeat_point, localfeat_point_db)
-            dist_point_vector.append((dist, j))
-        dist_point_vector = sorted(dist_point_vector, key=lambda x: x[0])
-        if dist_point_vector[0][0] <= point_threshold and abs(dist_point_vector[0][0]-dist_point_vector[1][0]) > rate_treshold
-            result[i] = dist_point_vector[0]
-    
-    valid_distances = np.array([x[0] for x in result if not(x is None)])
-    if len(valid_distances) == 0:
-        return np.inf
+    # Calculate score based on score_sys
+    valid_distances = np.array([top1.distance for top1 in good_matches])
     if score_sys == "match":
-        return 1.0 - len(valid_distances)/len(result)#number_matches/total_points
+        scores = 1.0 - len(valid_distances) / len(vector_local_feat)  # match rate
     elif score_sys == "avg":
-        return sum(valid_distances)/len(valid_distances)
+        scores = np.mean(valid_distances)  # average distance of valid matches
     elif score_sys == "weighted":
-        match_rate = 1.0 - len(valid_distances)/len(result)
-        average_dist = sum(valid_distances)/len(valid_distances)
-        return average_dist*match_rate
+        match_rate = 1.0 - len(valid_distances) / len(vector_local_feat)
+        average_dist = np.mean(valid_distances)
+        scores = average_dist * match_rate
     else:
-        sys.exit("ERROR: Invalid method for computing whole distance for a local feature")
+        raise ValueError("ERROR: Invalid method for computing whole distance for a local feature")
     #TODO: maybe ensure one unique asigment for each point?
     # optimizatio option: flann matcher
-            
+    return scores
             
 
 def retrieve_K_localfeat(descriptor, db_descriptor, measure, k, type_local_feat="SIFT", non_existent_behavior=False, score_sys="match", treshold=0.5):
-    
+    measure = LocalFeatMeasureFactory( measure)
     result = []
     #descriptor is a vector of local features, one for each keypoint detected
     for path, db_image_descriptor in db_descriptor:
-        dist = compare_localfeats(descriptor, db_image_descriptor, score_sys)
+        dist = compare_localfeats(descriptor, db_image_descriptor, score_sys, measure)
+        # print(path,dist)
         result.append((path, dist, db_image_descriptor, []))
 
     result = sorted(result, key=lambda x: x[1])

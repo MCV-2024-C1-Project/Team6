@@ -2,6 +2,17 @@
 import numpy as np
 import sys
 from numpy.linalg import norm
+import cv2
+
+def LocalFeatMeasureFactory(type:str):
+    if type == "L2":
+        return cv2.NORM_L2
+    if type == "L1":
+        return cv2.NORM_L1
+    if type == "Hamming":
+        return cv2.NORM_HAMMING
+    if type == "Hamming2":
+        return cv2.NORM_HAMMING2
 
 def MeasureFactory(type:str):
     #we'll treat all as a distance measurement, so the similarities we'll treated as negative

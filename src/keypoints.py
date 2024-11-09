@@ -12,10 +12,19 @@ def LocalFeatureExtractorFactory(type_str: str):
     class_name = parts[0]
     
     if class_name == "SIFT":
-        #no parameters
-        return SIFT()
+        if len(parts) > 1:
+            nfeatures, nOctaveLayers, contrastThreshold, edgeThreshold, sigma = parts[1:]
+            #no parameters
+            return SIFT(nfeatures, nOctaveLayers, contrastThreshold, edgeThreshold, sigma)
+        else:
+            return SIFT()
     elif class_name == "ORB":
-        return ORB()
+        if len(parts) > 1:
+            nfeatures, WTA_K, fastThreshold = parts[1:]
+            #no parameters
+            return ORB(nfeatures, WTA_K, fastThreshold)
+        else:
+            return ORB()
     elif class_name == "PCASIFT":
         # PCASIFT_nComponents
         n_components = int(parts[1]) if len(parts) > 1 else 64
@@ -90,26 +99,36 @@ class HarrisCornerDetector(KeypointDetector):
 
 # https://www.researchgate.net/publication/235355151_Scale_Invariant_Feature_Transform
 class SIFT(KeypointAndDescriptorExtractor):
+    def __init__(self, nfeatures=0, nOctaveLayers=3, contrastThreshold=0.04, edgeThreshold=10, sigma=1.6):
+        self.sift = cv2.SIFT_create(
+            nfeatures=nfeatures,           # whether we want to find a fixed number of keypoints
+            nOctaveLayers=nOctaveLayers,         # Use 4 layers per octave
+            contrastThreshold=contrastThreshold,  # Lower threshold to retain low-contrast features
+            edgeThreshold=edgeThreshold,         # Decrease to reduce edge-like features
+            sigma=sigma                # Reduce initial sigma for finer features
+        )
     def extract(self, image):
         image = resize_image(image)
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
-        sift = cv2.SIFT_create()
-
-        keypoints, descriptors = sift.detectAndCompute(gray_image, None)
-        
-        return keypoints, descriptors
+        keypoints, descriptors = self.sift.detectAndCompute(gray_image, None)
+        return descriptors
     
     
 class ORB(KeypointAndDescriptorExtractor):
+    def __init__(self, nfeatures=500, WTA_K=2, fastThreshold=20):
+        self.sift = cv2.ORB_create(
+            nfeatures=nfeatures,         # Start from the first pyramid level
+            WTA_K=WTA_K,          # Use a larger patch size around keypoints
+            fastThreshold=fastThreshold          # Lower threshold to capture more keypoints
+        )
     def extract(self, image):
         image = resize_image(image)
-        print(image.shape)
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
         orb = cv2.ORB_create()
 
         keypoints, descriptors = orb.detectAndCompute(gray_image, None)
         
-        return keypoints, descriptors
+        return descriptors
 
 # https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=eb14821f5908e614a72ca1e66664582938643d51#:~:text=PCA%2Dbased%20SIFT%20descriptors&text=This%20feature%20vector%20is%20sig,same%20keypoint%20in%20different%20images.
 class PCASIFT(KeypointAndDescriptorExtractor):
@@ -129,7 +148,7 @@ class PCASIFT(KeypointAndDescriptorExtractor):
         else:
             reduced_descriptors = None
 
-        return keypoints, reduced_descriptors
+        return reduced_descriptors
 
 def resize_image(image, target_height=512):
     height, width = image.shape[:2]
