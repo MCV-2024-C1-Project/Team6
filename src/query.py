@@ -60,7 +60,7 @@ def compare_localfeats(vector_local_feat, db_image_descriptor, score_sys, measur
     return scores
             
 
-def retrieve_K_localfeat(descriptor, db_descriptor, measure, k, type_local_feat="SIFT", non_existent_behavior=False, score_sys="match", treshold=0.5):
+def retrieve_K_localfeat(descriptor, db_descriptor, measure, k, type_local_feat="SIFT", non_existent_behavior=False, score_sys="weighted", treshold=0.5):
     measure = LocalFeatMeasureFactory( measure)
     result = []
     #descriptor is a vector of local features, one for each keypoint detected

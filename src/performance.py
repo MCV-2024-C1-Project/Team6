@@ -103,7 +103,7 @@ def compute_performance(result, ground_truth_path, debug=True):
     mean_apk = np.divide(mean_apk, total_paiting_query) if total_paiting_query > 0 else 0
     if debug:
         print(f"mean apk: {mean_apk}")
-        print(f"TP:{TP}, FN:{FN}, FP:{FP}, TN:{TN}")
-        print(f"F1_Score for -1 lists:{2*TP/(2*TP+FP+FN)}, precision:{ TP/(TP+FP)}, recall:{TP/(TP+FN)}")
+        # print(f"TP:{TP}, FN:{FN}, FP:{FP}, TN:{TN}")
+        # print(f"F1_Score for -1 lists:{2*TP/(2*TP+FP+FN)}, precision:{ TP/(TP+FP)}, recall:{TP/(TP+FN)}")
 
     return mean_apk, list_apk
