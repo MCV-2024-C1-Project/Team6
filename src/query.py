@@ -16,7 +16,7 @@ from src.denoising import noise_removal
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-def compare_localfeats(vector_local_feat, db_image_descriptor, score_sys, measure, point_threshold=np.inf, lowe_ratio_treshold=0.75):
+def compare_localfeats(vector_local_feat, db_image_descriptor, score_sys, measure, point_threshold=20, lowe_ratio_treshold=0.4):
     bf = cv2.BFMatcher(measure, crossCheck=False)
 
     # Perform KNN matching between query descriptors and current database image descriptors

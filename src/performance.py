@@ -49,7 +49,7 @@ def old_compute_performance(result, ground_truth_path, debug=False):
     mean_apk = np.divide(mean_apk, len(gt_list))
     return mean_apk, list_apk
 
-def compute_performance(result, ground_truth_path, debug=False):
+def compute_performance(result, ground_truth_path, debug=True):
     query_result_bbdd_id = [] #len(query_result_bbdd_id) == 30, image in lk_paintings_image, image list of N elements (N is paintings on image), each painting in image, painting is a list of K result(k bbdd_id)
     for image_result in result:
         image_result_bbdd_id = []
@@ -79,18 +79,19 @@ def compute_performance(result, ground_truth_path, debug=False):
             total_paiting_query += 1
             if (i_painting >= len(query_result_bbdd_id[i_image]) ):
                 print(f"We predicted {str(len(query_result_bbdd_id[i_image]))} paintings for image {str(i_image)}, however the gt says they are {str(len(gt_image))} paintings")
+                list_apk.append(0)
                 continue
             apk = compute_APK(gt_painting, query_result_bbdd_id[i_image][i_painting])
             if -1 in gt_painting:
                 if len(query_result_bbdd_id[i_image][i_painting]) == 1 and query_result_bbdd_id[i_image][i_painting][0] == -1:
-                    TN += 1
+                    TP += 1
                 else:
-                    FP += 1
+                    FN += 1
             else:
                 if len(query_result_bbdd_id[i_image][i_painting]) == 1 and query_result_bbdd_id[i_image][i_painting][0] == -1:
-                    FN += 1
+                    FP += 1
                 else:
-                    TP += 1
+                    TN += 1
 
             list_apk.append(apk)
             mean_apk = mean_apk + apk
@@ -101,7 +102,8 @@ def compute_performance(result, ground_truth_path, debug=False):
             #####
     mean_apk = np.divide(mean_apk, total_paiting_query) if total_paiting_query > 0 else 0
     if debug:
-        print(f"TP:{TP}, FN:{FN}, FP:{FP}")
-        print(f"F1_Score:{2*TP/(2*TP+FP+FN)}")
+        print(f"mean apk: {mean_apk}")
+        print(f"TP:{TP}, FN:{FN}, FP:{FP}, TN:{TN}")
+        print(f"F1_Score for -1 lists:{2*TP/(2*TP+FP+FN)}, precision:{ TP/(TP+FP)}, recall:{TP/(TP+FN)}")
 
     return mean_apk, list_apk
