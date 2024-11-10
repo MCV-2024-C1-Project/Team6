@@ -27,10 +27,17 @@ def compare_localfeats(vector_local_feat, db_image_descriptor, score_sys, measur
 
     # Apply ratio test to filter good matches
     good_matches = []
-    for top1, top2 in matches:
-        if top1.distance < lowe_ratio_treshold * top2.distance and top1.distance < point_threshold:
-            good_matches.append(top1)
-
+    for match in matches:
+        if len(match) == 2:
+            top1, top2 = match
+            if top1.distance < lowe_ratio_treshold * top2.distance and top1.distance < point_threshold:
+                good_matches.append(top1)
+                # print(top1.distance)
+        else:
+            if match[0].distance < point_threshold:
+                good_matches.append(match[0])
+                # print(match[0].distance)
+    
     # Calculate score based on the scoring system
     if len(good_matches) == 0:
         scores = np.inf  # No valid matches, set score to infinity
@@ -88,6 +95,11 @@ def prediction(input_path, db_path, k, descriptor_type, descriptor_subtype, num_
 
     for path in tqdm(image_paths, desc="Processing images"):
         raw_image = imageio.imread(path)
+        if remove_noise:
+            # list_image = [noise_removal(image, noise_filter_arguments) for image in list_image]
+            raw_image = noise_removal(raw_image, noise_filter_arguments)
+
+
         if remove_background:
             list_image = frame_detector(raw_image, False) # now crop image may generate more than one , ideally starting a top left and ending a bottom right
             # print(raw_image.dtype, np.max(raw_image))
@@ -100,10 +112,7 @@ def prediction(input_path, db_path, k, descriptor_type, descriptor_subtype, num_
             #     ax[i+1].axis('off')
             # plt.show()
         else:
-            list_image = [raw_image]
-        
-        if remove_noise:
-            list_image = [noise_removal(image, noise_filter_arguments) for image in list_image] 
+            list_image = [raw_image] 
 
         result_tmp = []
         for image in list_image:
