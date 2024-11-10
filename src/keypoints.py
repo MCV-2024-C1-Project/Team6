@@ -12,23 +12,38 @@ def LocalFeatureExtractorFactory(type_str: str):
     class_name = parts[0]
     
     if class_name == "SIFT":
-        # SIFT_response_octave, e.g.
-        response_threshold = float(parts[1]) if len(parts) > 1 else 0.6
-        octave_threshold = int(parts[2]) if len(parts) > 2 else 2
-        return SIFT(response_threshold, octave_threshold)
+        # SIFT_nfeatures_nOctaveLayers_contrastThreshold
+        nfeatures = int(parts[1]) if len(parts) > 1 else 0  # 0 means no limit
+        nOctaveLayers = int(parts[2]) if len(parts) > 2 else 3
+        contrastThreshold = float(parts[3]) if len(parts) > 3 else 0.04
+        return SIFT(nfeatures, nOctaveLayers, contrastThreshold)
     elif class_name == "ORB":
         if len(parts) > 1:
-            nfeatures, WTA_K, fastThreshold = parts[1:]
-            #no parameters
+            nfeatures = int(parts[1])
+            WTA_K = int(parts[2]) if len(parts) > 2 else 2
+            fastThreshold = int(parts[3]) if len(parts) > 3 else 20
             return ORB(nfeatures, WTA_K, fastThreshold)
         else:
             return ORB()
     elif class_name == "PCASIFT":
         # PCASIFT_nComponents_response_octave
-        n_components = int(parts[1]) if len(parts) > 1 else 64
-        response_threshold = float(parts[2]) if len(parts) > 2 else 0.6
-        octave_threshold = int(parts[3]) if len(parts) > 3 else 2
-        return PCASIFT(n_components, response_threshold, octave_threshold)
+        # n_components = int(parts[1]) if len(parts) > 1 else 64
+        # response_threshold = float(parts[2]) if len(parts) > 2 else 0.6
+        # octave_threshold = int(parts[3]) if len(parts) > 3 else 2
+        # return PCASIFT(n_components, response_threshold, octave_threshold)
+        return None
+    elif class_name == "KAZE":
+        if len(parts) > 1:
+            extended, threshold, nOctaves, nOctaveLayers = parts[1:]
+            
+            if(parts[1] == 1):extended=True
+            else: extended= False
+            threshold = float(parts[2]) if len(parts) > 2 else 0.001
+            nOctaves = int(parts[3]) if len(parts) > 3 else 4
+            nOctaveLayers = int(parts[4]) if len(parts) > 4 else 4
+            return KAZE(extended, threshold, nOctaves, nOctaveLayers)
+        else:
+            return KAZE()
     else:
         sys.exit(f"ERROR: Unknown keypoint detector type '{type_str}'")
 
@@ -99,30 +114,23 @@ class HarrisCornerDetector(KeypointDetector):
 
 # https://www.researchgate.net/publication/235355151_Scale_Invariant_Feature_Transform
 class SIFT(KeypointAndDescriptorExtractor):
+    def __init__(self, nfeatures, nOctaveLayers, contrastThreshold):
+        self.sift = cv2.SIFT_create(
+            nfeatures=nfeatures,
+            nOctaveLayers=nOctaveLayers,
+            contrastThreshold=contrastThreshold
+        )
+
     def extract(self, image):
         image = resize_image(image)
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
-        sift = cv2.SIFT_create()
-        keypoints, descriptors = sift.detectAndCompute(gray_image, None)
-
-        if not keypoints:
-            return [], None
-
-        max_response = max(kp.response for kp in keypoints)
-        filtered_keypoints = [
-            kp for kp in keypoints
-            if kp.response >= self.response_threshold * max_response and kp.octave >= self.octave_threshold
-        ]
-        filtered_descriptors = descriptors[
-            [i for i, kp in enumerate(keypoints) if kp in filtered_keypoints]
-        ] if descriptors is not None else None
-
-        return filtered_descriptors
+        keypoints, descriptors = self.sift.detectAndCompute(gray_image, None)
+        return descriptors
     
     
 class ORB(KeypointAndDescriptorExtractor):
     def __init__(self, nfeatures=500, WTA_K=2, fastThreshold=20):
-        self.sift = cv2.ORB_create(
+        self.orb = cv2.ORB_create(
             nfeatures=nfeatures,         # Start from the first pyramid level
             WTA_K=WTA_K,          # Use a larger patch size around keypoints
             fastThreshold=fastThreshold          # Lower threshold to capture more keypoints
@@ -130,9 +138,25 @@ class ORB(KeypointAndDescriptorExtractor):
     def extract(self, image):
         image = resize_image(image)
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
-        orb = cv2.ORB_create()
 
-        keypoints, descriptors = orb.detectAndCompute(gray_image, None)
+        keypoints, descriptors = self.orb.detectAndCompute(gray_image, None)
+        
+        return descriptors
+
+class KAZE(KeypointAndDescriptorExtractor):
+    def __init__(self, extended=False, threshold=0.001, nOctaves=4, nOctaveLayers=4):
+        self.kaze = cv2.KAZE_create(
+            extended=extended,          # Default: False
+            threshold=threshold,        # Default: 0.001
+            nOctaves=nOctaves,          # Default: 4
+            nOctaveLayers=nOctaveLayers # Default: 4
+        )
+    
+    def extract(self, image):
+        image = resize_image(image)
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+
+        keypoints, descriptors = self.kaze.detectAndCompute(gray_image, None)
         
         return descriptors
 
@@ -204,3 +228,4 @@ if __name__ == "__main__":
     # plt.imshow(disp_img)
     # plt.title(f"Detected Keypoints: {len(keypoints)}")
     # plt.show()
+
