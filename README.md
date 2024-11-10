@@ -1,5 +1,5 @@
 # PROJECT: IMAGE RETRIEVAL
-##[Presentation link about the project](https://docs.google.com/presentation/d/1bqjcOVqUxWJU6paaSzoSy23WcqKdVqcsnEA1TLI1h0Q/edit?usp=sharing)
+## [Google slide presentation about the project](https://docs.google.com/presentation/d/1bqjcOVqUxWJU6paaSzoSy23WcqKdVqcsnEA1TLI1h0Q/edit?usp=sharing)
 ## Description
 
 This project implements an image retrieval system that uses many types of image descriptors (color, texture, keypoints, etc.) to find the most similar images in a museum dataset. For each image in the query dataset, the system retrieves the top K most similar images from the museum dataset, ordered by their similarity scores.
