@@ -103,7 +103,7 @@ class HarrisCornerDetector(KeypointDetector):
         self.threshold = threshold
 
     def detect_keypoints(self, image):
-        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+        gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY) if len(image.shape) == 3 else image
         
         harris_corners = cv2.cornerHarris(gray_image, blockSize=self.block_size, ksize=self.ksize, k=self.k)
         
@@ -123,7 +123,7 @@ class SIFT(KeypointAndDescriptorExtractor):
 
     def extract(self, image):
         image = resize_image(image)
-        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+        gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY) if len(image.shape) == 3 else image
         keypoints, descriptors = self.sift.detectAndCompute(gray_image, None)
         return descriptors
     
@@ -137,7 +137,7 @@ class ORB(KeypointAndDescriptorExtractor):
         )
     def extract(self, image):
         image = resize_image(image)
-        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+        gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY) if len(image.shape) == 3 else image
 
         keypoints, descriptors = self.orb.detectAndCompute(gray_image, None)
         
@@ -154,7 +154,7 @@ class KAZE(KeypointAndDescriptorExtractor):
     
     def extract(self, image):
         image = resize_image(image)
-        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+        gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY) if len(image.shape) == 3 else image
 
         keypoints, descriptors = self.kaze.detectAndCompute(gray_image, None)
         
@@ -169,7 +169,7 @@ class PCASIFT(KeypointAndDescriptorExtractor):
 
     def extract(self, image):
         image = resize_image(image)
-        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+        gray_image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY) if len(image.shape) == 3 else image
         sift = cv2.SIFT_create()
         keypoints, descriptors = sift.detectAndCompute(gray_image, None)
 
