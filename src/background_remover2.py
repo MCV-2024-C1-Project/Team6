@@ -10,6 +10,7 @@ from scipy.optimize import LinearConstraint
 import math
 import scipy as sp
 from skimage import feature
+import skimage as skim
 from skimage.transform import probabilistic_hough_line
 import skimage.draw as draw
 from skimage.morphology import convex_hull_image
@@ -17,11 +18,94 @@ from scipy.spatial import ConvexHull
 from scipy.optimize import minimize
 from shapely.geometry import Polygon
 
+def extract_background_color(image, border_size=1):
+    h, w, ch = image.shape
+    north_colors = image[0:border_size, :, :]
+    south_colors = image[h-border_size:h, :, :]
+    west_colors = image[border_size:h-border_size, 0:border_size, :]
+    east_colors = image[border_size:h-border_size, w-border_size:w, :]
+    border_colors = np.concatenate([north_colors.reshape(-1, 3), 
+                                    south_colors.reshape(-1, 3),
+                                    west_colors.reshape(-1, 3),
+                                    east_colors.reshape(-1, 3)])
+    return np.median(border_colors, axis=0)
+
+def denoise(image, debug_show=False):
+    image_f = cv2.bilateralFilter(image, 15, 60, 90)
+    image_f = cv2.medianBlur(image_f, 5)
+    if debug_show:
+        _, ax = plt.subplots(1, 2)
+        ax[0].imshow(image)
+        ax[0].axis('off')
+        ax[1].imshow(image_f)
+        ax[1].axis('off')
+        plt.show()
+    return image_f
+
+def background_image_distance(image, debug_show=False):
+    image_lab = cv2.cvtColor(image, cv2.COLOR_RGB2Lab)
+    color = extract_background_color(image_lab)
+    diff = np.zeros_like(image_lab).astype(np.float32)
+    for i in range(3):
+        diff[:,:,i] = np.abs(image_lab[:,:, i]-color[i])
+    diff[:,:,0] *= 0.5
+    norm = np.linalg.norm(diff, axis=-1)
+    norm = sp.ndimage.gaussian_filter(norm, sigma=1.0)
+    if debug_show:
+        _, ax = plt.subplots(1, 2)
+        ax[0].imshow(image)
+        ax[0].axis('off')
+        ax[1].imshow(norm)
+        ax[1].axis('off')
+        plt.axis('off')
+        plt.show()
+    return norm.astype(np.uint8)
+
+def edge_detection(image, sigma=0.5, low_threshold=20, high_threshold=50, debug_show=False):
+    edges = np.zeros_like(image)
+    for i in range(3):
+        edges[:,:,i] = feature.canny(image[:,:,i], sigma=sigma, high_threshold=high_threshold, low_threshold=low_threshold)
+    result = np.max(edges, axis=2)>0
+    if debug_show:
+        _, ax = plt.subplots(1, 2)
+        ax[0].imshow(image)
+        ax[0].axis('off')
+        ax[1].imshow(result)
+        ax[1].axis('off')
+        plt.axis('off')
+        plt.show()
+    return result
+
+def sobel_edges(image):
+    edges = np.zeros_like(image)
+    for i in range(3):
+        edges[:,:,i] = skim.filters.sobel(image[:,:,i].astype(np.float32))
+    result = np.max(edges, axis=2)
+    return result
+
+def edge_filling(edges, line_gap=0.01, threshold=0.1, debug_show=True):
+    segment_threshold = int(min(edges.shape[0], edges.shape[1]) * threshold)
+    line_gap_it = int(min(edges.shape[0], edges.shape[1]) * line_gap)
+    edges_d = sp.ndimage.binary_dilation(edges, iterations=line_gap_it)
+    insides = sp.ndimage.binary_fill_holes(edges_d)
+    insides = sp.ndimage.binary_erosion(insides, iterations=line_gap_it)
+    insides = sp.ndimage.binary_opening(insides, iterations=line_gap_it+2)
+    insides = sp.ndimage.binary_propagation(sp.ndimage.binary_erosion(insides, iterations=segment_threshold), mask=insides)
+    if debug_show:
+        _, ax = plt.subplots(1, 2)
+        ax[0].imshow(edges)
+        ax[0].axis('off')
+        ax[1].imshow(insides)
+        ax[1].axis('off')
+        plt.axis('off')
+        plt.show()
+    return insides
 
 def area_difference(quad_points, polygon_points):
     quad_points = np.reshape(quad_points, (4, 2))
     quadrilateral = Polygon(quad_points)
     polygon = Polygon(polygon_points)
+    print(polygon)
     outside_area = polygon.union(quadrilateral).area - polygon.intersection(quadrilateral).area
     return outside_area
 
@@ -34,7 +118,6 @@ def smallest_fitting_quad(polygon_points):
     result = minimize(area_difference, x0, args=(polygon_points,), method='L-BFGS-B')
     best_quad = result.x.reshape(4, 2)
     return best_quad.tolist()
-
 
 def sort_quad_points(quad_points):
     quad_points = np.array(quad_points, dtype=np.float32)
@@ -65,8 +148,17 @@ def extract_and_rectify_region(image, quad_points):
 
     M = cv2.getPerspectiveTransform(quad_points, dest_points)
     rectified_image = cv2.warpPerspective(image, M, (width, height))
-
     return rectified_image
+
+def get_bbox(img):
+    non_zero_indices = np.argwhere(img)
+    if len(non_zero_indices) == 0:
+        return tuple((0, size, size) for size in img.shape)
+
+    min_indices = np.min(non_zero_indices,axis=0)
+    max_indices = np.max(non_zero_indices,axis=0)
+
+    return slice(min_indices[0], max_indices[0]), slice(min_indices[1], max_indices[1])
 
 def reorder_labels(label_map):
     num_labels = label_map.max()
@@ -79,48 +171,20 @@ def reorder_labels(label_map):
         reordered_label_map[label_map == old_label] = new_label
     return reordered_label_map
 
-def denoise(image):
-    result = np.zeros_like(image)
-    for i in range(3):
-        result[:,:,i] = sp.ndimage.median_filter(image[:,:,i], size=7)
-    return result
 
-# sigma=2, threshold=50
-def edge_detection(image, sigma=1.5, threshold=55):
-    edges = np.zeros_like(image)
-    for i in range(3):
-        edges[:,:,i] = feature.canny(image[:,:,i], sigma=sigma, high_threshold=threshold, low_threshold=threshold*0.5)
-    result = np.max(edges, axis=2)>0
-    # _, ax = plt.subplots(1, 2)
-    # ax[0].imshow(image)
-    # ax[0].axis('off')
-    # ax[1].imshow(result)
-    # ax[1].axis('off')
-    # plt.axis('off')
-    # plt.show()
-    return result
-
-def frame_filling(image, edges, line_gap=0.01, threshold=0.1):
-    segment_threshold = int(min(edges.shape[0], edges.shape[1]) * threshold)
-    line_gap_it = int(min(edges.shape[0], edges.shape[1]) * line_gap)
-    edges_d = sp.ndimage.binary_dilation(edges, iterations=line_gap_it)
-    insides = sp.ndimage.binary_fill_holes(edges_d)
-    insides = sp.ndimage.binary_erosion(insides, iterations=line_gap_it)
-    insides = sp.ndimage.binary_opening(insides, iterations=line_gap_it+2)
-    insides = sp.ndimage.binary_propagation(sp.ndimage.binary_erosion(insides, iterations=segment_threshold), mask=insides)
-    return insides
-
-def frame_segmenter(image):
-    edges = edge_detection(image)
-    frames = frame_filling(image, edges)
+def frame_segmenter(image, debug_show=False):
+    intensity = background_image_distance(image, False)
+    edges = feature.canny(intensity, sigma=0.5, high_threshold=10, low_threshold=5)
+    frames = edge_filling(edges, debug_show=False)
     labeled_array, num_features = sp.ndimage.label(frames)
     labeled_array = reorder_labels(labeled_array)
-    # _, ax = plt.subplots(1, 2)
-    # ax[0].imshow(image)
-    # ax[0].axis('off')
-    # ax[1].imshow(labeled_array)
-    # ax[1].axis('off')
-    # plt.show()
+    if debug_show:
+        _, ax = plt.subplots(1, 2)
+        ax[0].imshow(image)
+        ax[0].axis('off')
+        ax[1].imshow(labeled_array)
+        ax[1].axis('off')
+        plt.show()
     return labeled_array, num_features
 
 def get_best_quad_fit(region):
@@ -135,18 +199,13 @@ def get_best_quad_fit(region):
 
 def extract_frame(image, region):
     region2 = convex_hull_image(region)
-    quad = get_best_quad_fit(region2)
-    # plt.imshow(image)
-    # # plt.imshow(region, cmap='gray', alpha=0.5)
-    # plt.scatter(*zip(*quad), color='red', marker='o')
-    # plt.axis('off')
-    # plt.show()
-    return extract_and_rectify_region(image, quad), region2
+    bbox = get_bbox(region2)
+    return np.copy(image[bbox]), region2
 
 def frame_detector(image, return_mask=False):
-    image_f = denoise(image)
+    image_f = denoise(image, debug_show=False)
     segments, num_features = frame_segmenter(image_f)
-    result_mask = np.zeros_like(segments)
+    result_mask = np.zeros_like(image[:,:,0])
     result_frames = []
     for i in range(num_features):
         frame, final_mask = extract_frame(image, (segments==(i+1)))
@@ -192,6 +251,11 @@ def test_background_removal(input_folder,output_folder,plot = False, save=False,
             image = imageio.imread(image_path)
             gt_mask = imageio.imread(image_path[:-4] + ".png")
             pred_mask, frames = frame_detector(image, return_mask=True)
+            # plt.imshow(image)
+            # plt.show()
+            # for f in frames:
+            #     plt.imshow(f)
+            #     plt.show()
             metric = evaluate(gt_mask, pred_mask)
             metrics.append(metric)
             if(plot):
@@ -229,7 +293,6 @@ def test_background_removal(input_folder,output_folder,plot = False, save=False,
     print(f'prec: {prec}, recall: {recall}, f1: {f1}')
 
 if __name__ == '__main__':
-    dataset_folder = "data/week3/qsd2_w3"
-    output_folder = "data/week3/plots"
-    results_folder = "data/week3/results"
+    dataset_folder = "data/week4/qsd1_w4"
+    results_folder = "data/week4/results"
     test_background_removal(dataset_folder, results_folder, plot=False, save=False)
